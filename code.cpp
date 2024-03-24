@@ -2,8 +2,8 @@
 using namespace std;
 
 #define fastio ios_base::sync_with_stdio(false); cin.tie(NULL); cout.tie(NULL);
-#define all(x) (x).begin(), (x).end()
-#define rall(x) (x).rbegin(), (x).rend()
+#define alll(x) (x).begin(), (x).end()
+#define ralll(x) (x).rbegin(), (x).rend()
 #define pb push_back
 #define mp make_pair
 #define fi first
