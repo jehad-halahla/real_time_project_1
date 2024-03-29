@@ -6,7 +6,7 @@ int main() {
     int pid = fork();
 
     if (pid == 0) {
-        execl("./child", (char*) NULL);
+        execlp("./child", (char*) NULL);
     } else {
         printf("Parent process with PID %d\n", getpid());
     }
