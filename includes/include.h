@@ -16,5 +16,18 @@
 
 #define PLAYERS_PER_TEAM 6
 
-
 #endif
+
+#ifndef GAME_DURATION
+#define GAME_DURATION 1
+#endif
+
+#ifndef MAX_PLAYER_ENERGY
+#define MAX_PLAYER_ENERGY 40 // test value, might change later.
+#endif
+
+
+#ifndef MIN_PLAYER_ENERGY
+#define MIN_PLAYER_ENERGY 10 // test value, might change later.
+#endif
+
