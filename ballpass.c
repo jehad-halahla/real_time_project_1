@@ -18,6 +18,7 @@ struct Player {
     float x;
     float y;
 };
+void updateBallPosition(struct Ball* ball, struct Player* targetPlayer, float speed);
 
 struct Ball blueBall, redBall;
 struct Player blueTeam[NUM_PLAYERS_PER_TEAM], redTeam[NUM_PLAYERS_PER_TEAM];

@@ -5,8 +5,11 @@
 unsigned energy;
 unsigned player_number;
 unsigned next_player_number;
+#define A 5
+#define K 5
+#define RAND 14
 
-void short_pause_duration();
+int short_pause_duration();
 
 int main(int argc, char* argv[]) {
 
@@ -32,8 +35,7 @@ int main(int argc, char* argv[]) {
 }
 
 
-void short_pause_duration() {
+int short_pause_duration() {
 
-    // TODO 
-
+    return A / pow((double)(energy + RAND), (double)K);
 }
