@@ -1,5 +1,8 @@
 #include "includes/include.h"
 #include <unistd.h>
+#include <sys/stat.h>
+#include <linux/stat.h>
+#include <fcntl.h>
 
 pid_t process_pid[2*PLAYERS_PER_TEAM]; 
 unsigned player_energy[2*PLAYERS_PER_TEAM]; 
@@ -8,15 +11,67 @@ unsigned next_player; /* each process will have a different next player pid,
 
 int status, i;
 
-unsigned int team_1_total_score = 0;
-unsigned int team_2_total_score = 0;
 
+//create structs 
+team team1;
+team team2;
+//init the two structs to 0 balls and 0 score
 
 void create_FIFOs();
 void assign_initial_energy();
+void fork_children();
+void init_teams();
 
 int main() {
+    //create the FIFOs
+    create_FIFOs();
+    fork_children();
 
+    return 0;
+}
+
+
+
+/* FUNCTIONS */
+void assign_initial_energy() {
+
+    for (int i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
+
+        player_energy[i] =  MIN_PLAYER_ENERGY + (rand() % (abs(MAX_PLAYER_ENERGY - MIN_PLAYER_ENERGY)));
+    }
+}
+
+void init_teams() {
+    team1.number_of_balls = 0;
+    team1.total_score = 0;
+    team2.number_of_balls = 0;
+    team2.total_score = 0;
+}
+
+void create_FIFOs()
+{
+
+    // CAUTION:
+    // If keeping the FIFOs causes problems, we might need to remove the FIFOS if they exist
+    // 
+    //
+    //
+    // if the FIFO exists, no problem.
+    if ((mkfifo(FIFO1, S_IFIFO | 0777)) == -1 && errno != EEXIST)
+    {
+        perror("Error Creating Fifo");
+        exit(-1);
+    }
+
+    // if the FIFO exists, no problem.
+    if ((mkfifo(FIFO2, S_IFIFO | 0777)) == -1 && errno != EEXIST)
+    {
+        perror("Error Creating Fifo");
+        exit(-1);
+    }
+}
+
+void fork_children(){
     for (i = 0; i < 2 * PLAYERS_PER_TEAM; i++) {
         //we will fork a child and execute the child program
         int current_pid;
@@ -41,9 +96,6 @@ int main() {
             next_player = (i < PLAYERS_PER_TEAM) ? ((i+1) % PLAYERS_PER_TEAM) : 6 + ((i+1) % PLAYERS_PER_TEAM);
             sprintf(next_player_arg, "%d",next_player);
 
-            // printf("-------------pid%d arg0=%s arg1=%s arg2=%s---------------------\n", getpid(), player_number_arg, energy_arg, next_player_arg);
-
-
             execlp("./child" ,"child.o",player_number_arg, energy_arg, next_player_arg, (const char*)NULL) ;
 
             perror("execvp failed.\n");
@@ -61,50 +113,9 @@ int main() {
             exit(2);
 
 
-        } else {
-
-            printf("Parent process with PID %d\n",getpid());
-            
+        } else {            
             process_pid[i] = current_pid;  
         }
-
-       // for (i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
-         //   waitpid(process_pid[i], &status, 0);
-       // }
-    }
-
-    return 0;
-}
-
-void assign_initial_energy() {
-
-    
-    for (int i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
-
-        player_energy[i] =  MIN_PLAYER_ENERGY + (rand() % (abs(MAX_PLAYER_ENERGY - MIN_PLAYER_ENERGY)));
-    }
-}
-
-void create_FIFOs()
-{
-
-    // CAUTION:
-    // If keeping the FIFOs causes problems, we might need to remove the FIFOS if they exist
-    // 
-    //
-    //
-    // if the FIFO exists, no problem.
-    if ((mkfifo(FIFO1, S_IFIFO | 0777)) == -1 && errno != EEXIST)
-    {
-        perror("Error Creating Fifo");
-        exit(-1);
-    }
-
-    // if the FIFO exists, no problem.
-    if ((mkfifo(FIFO2, S_IFIFO | 0777)) == -1 && errno != EEXIST)
-    {
-        perror("Error Creating Fifo");
-        exit(-1);
-    }
+    }    
 }
 

@@ -14,8 +14,21 @@
 #include <time.h>
 #include <errno.h>
 #include <math.h>
+#include <stdlib.h>
 
 #define PLAYERS_PER_TEAM 6
+
+// typedef struct player{
+//     unsigned int pid;
+//     unsigned int energy;
+//     unsigned int score;
+// } player;
+
+typedef struct team{
+    unsigned int number_of_balls;
+    unsigned int total_score; // incremented each round when balls are less than another team's balls.
+} team;
+
 
 #endif
 
@@ -31,8 +44,8 @@
 #define MIN_PLAYER_ENERGY 10 // test value, might change later.
 #endif
 
-#define FIFO1 "./tmp/FIFO1"
-#define FIFO2 "./tmp/FIFO2"
+#define FIFO1 "/tmp/FIFO1"
+#define FIFO2 "/tmp/FIFO2"
 
 #define TEAM1_LEADER 0 // index of the team leader of team 1 in the pids array that is maintained by the parent.
 #define TEAM2_LEADER PLAYERS_PER_TEAM // index of the team leader of team 2.
