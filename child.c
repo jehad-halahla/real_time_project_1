@@ -1,16 +1,39 @@
 #include "includes/include.h"
+#include <stdlib.h>
+#include <string.h>
+
+unsigned energy;
+unsigned player_number;
+unsigned next_player_number;
+
+void short_pause_duration();
 
 int main(int argc, char* argv[]) {
 
     // TODO: if argc != numberOfArgs.. 
 
-    for (int i = 0; i < argc; i++) {
+    char* arguments=malloc(50 * sizeof(char));
 
-        printf("arg%d=%s\n",i, argv[i]);
+    for (int i = 1; i < argc; i++) {
+        
+        strcat(arguments, "  ");
+        strcat(arguments, argv[i]); 
+     }
+
+        printf("Child process with PID %d has args: %s\n", getpid(), arguments);
+
+
+    energy = atoi(argv[2]);
+    player_number = atoi(argv[1]);
+    next_player_number = atoi(argv[3]);
     
-    }
-
-        printf("Child process with PID %d\n", getpid());
 
     return 0;
+}
+
+
+void short_pause_duration() {
+
+    // TODO 
+
 }

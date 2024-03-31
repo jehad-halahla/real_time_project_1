@@ -1,10 +1,19 @@
 #include "includes/include.h"
+#include <unistd.h>
 
 pid_t process_pid[2*PLAYERS_PER_TEAM]; 
 unsigned player_energy[2*PLAYERS_PER_TEAM]; 
+unsigned next_player; /* each process will have a different next player pid,
+                       this is used to index the pids array and send the pid to the process when we use execlp. arg[3] */ 
 
-char* args[2]; // just to test, it will have more than 2 elements.
 int status, i;
+
+unsigned int team_1_total_score = 0;
+unsigned int team_2_total_score = 0;
+
+
+void create_FIFOs();
+void assign_initial_energy();
 
 int main() {
 
@@ -19,16 +28,23 @@ int main() {
 
         char player_number_arg[4];
         char energy_arg[20];
+        char next_player_arg[20]; 
 
-        sprintf(player_number_arg, "%d", i);
-        sprintf(energy_arg, "%u", player_energy[i]);
-        
+        srand(time(NULL)); 
+        assign_initial_energy();
 
         if (current_pid == 0) {
-            args[0] = player_number_arg;
-            args[1] = energy_arg;
 
-            execlp("./child" ,"child.o",player_number_arg, energy_arg,(const char*)NULL) ;
+            sprintf(player_number_arg, "%d", i);
+            sprintf(energy_arg, "%d", player_energy[i]);
+            // this is unlikely to be incorrect, but feel free to triple check it, since it can cause serious damage.
+            next_player = (i < PLAYERS_PER_TEAM) ? ((i+1) % PLAYERS_PER_TEAM) : 6 + ((i+1) % PLAYERS_PER_TEAM);
+            sprintf(next_player_arg, "%d",next_player);
+
+            // printf("-------------pid%d arg0=%s arg1=%s arg2=%s---------------------\n", getpid(), player_number_arg, energy_arg, next_player_arg);
+
+
+            execlp("./child" ,"child.o",player_number_arg, energy_arg, next_player_arg, (const char*)NULL) ;
 
             perror("execvp failed.\n");
             
@@ -65,6 +81,30 @@ void assign_initial_energy() {
     
     for (int i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
 
-        player_energy[i] =  MIN_PLAYER_ENERGY + rand() % (abs(MAX_PLAYER_ENERGY - MIN_PLAYER_ENERGY));
+        player_energy[i] =  MIN_PLAYER_ENERGY + (rand() % (abs(MAX_PLAYER_ENERGY - MIN_PLAYER_ENERGY)));
     }
 }
+
+void create_FIFOs()
+{
+
+    // CAUTION:
+    // If keeping the FIFOs causes problems, we might need to remove the FIFOS if they exist
+    // 
+    //
+    //
+    // if the FIFO exists, no problem.
+    if ((mkfifo(FIFO1, S_IFIFO | 0777)) == -1 && errno != EEXIST)
+    {
+        perror("Error Creating Fifo");
+        exit(-1);
+    }
+
+    // if the FIFO exists, no problem.
+    if ((mkfifo(FIFO2, S_IFIFO | 0777)) == -1 && errno != EEXIST)
+    {
+        perror("Error Creating Fifo");
+        exit(-1);
+    }
+}
+
