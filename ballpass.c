@@ -6,7 +6,6 @@ const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 600;
 const float PI = 3.14159265359f;
 #define  NUM_PLAYERS_PER_TEAM  6
-
 struct Ball {
     float x;
     float y;
@@ -22,7 +21,8 @@ struct Player {
 
 struct Ball blueBall, redBall;
 struct Player blueTeam[NUM_PLAYERS_PER_TEAM], redTeam[NUM_PLAYERS_PER_TEAM];
-int activePlayer = 0; // Index of the player currently in possession of the blue ball
+int blueActivePlayer = 0; // Index of the player currently in possession of the blue ball
+int redActivePlayer = 0;  // Index of the player currently in possession of the red ball
 
 void drawSquare(float x, float y, float size, float r, float g, float b) {
     glColor3f(r, g, b);
@@ -69,8 +69,8 @@ void display() {
     // Draw red ball
     drawBall(redBall.x, redBall.y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for red ball
 
-    updateBallPosition(&blueBall, &blueTeam[(activePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
-    updateBallPosition(&redBall, &redTeam[(activePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
+    updateBallPosition(&blueBall, &blueTeam[(blueActivePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
+    updateBallPosition(&redBall, &redTeam[(redActivePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
 
     glFlush();
 }
@@ -83,7 +83,11 @@ void updateBallPosition(struct Ball* ball, struct Player* targetPlayer, float sp
         // Check if ball reached the destination
         if (fabs(ball->x - targetPlayer->x) < 0.01 && fabs(ball->y - targetPlayer->y) < 0.01) {
             ball->moving = false;
-            activePlayer = (activePlayer + 1) % NUM_PLAYERS_PER_TEAM; // Update active player
+            if (ball == &blueBall) {
+                blueActivePlayer = (blueActivePlayer + 1) % NUM_PLAYERS_PER_TEAM; // Update active player for blue team
+            } else {
+                redActivePlayer = (redActivePlayer + 1) % NUM_PLAYERS_PER_TEAM; // Update active player for red team
+            }
         }
     }
 }
@@ -97,10 +101,10 @@ void passBall(struct Ball* ball, struct Player* targetPlayer, float speed) {
 void keyboard(unsigned char key, int x, int y) {
     switch (key) {
         case 'p': // 'p' key to pass the blue ball
-            passBall(&blueBall, &blueTeam[(activePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
+            passBall(&blueBall, &blueTeam[(blueActivePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
             break;
         case 'P': // 'P' key to pass the red ball
-            passBall(&redBall, &redTeam[(activePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
+            passBall(&redBall, &redTeam[(redActivePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
             break;
     }
     glutPostRedisplay();
