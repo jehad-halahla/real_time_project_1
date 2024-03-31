@@ -24,7 +24,7 @@
 //     unsigned int score;
 // } player;
 
-typedef struct team{
+typedef struct team {
     unsigned int number_of_balls;
     unsigned int total_score; // incremented each round when balls are less than another team's balls.
 } team;
