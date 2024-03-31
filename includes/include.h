@@ -13,6 +13,7 @@
 #include <signal.h>
 #include <time.h>
 #include <errno.h>
+#include <math.h>
 
 #define PLAYERS_PER_TEAM 6
 
