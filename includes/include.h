@@ -2,7 +2,6 @@
 #define __INCLUDE_H_
 
 #include <stdio.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -15,6 +14,7 @@
 #include <errno.h>
 #include <math.h>
 #include <stdlib.h>
+#include <sys/types.h>
 
 #define PLAYERS_PER_TEAM 6
 

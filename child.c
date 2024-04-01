@@ -1,5 +1,7 @@
 #include "includes/include.h"
+#include <bits/types/sigset_t.h>
 #include <stdio.h>
+#include <unistd.h>
 
 unsigned energy;
 unsigned player_number;
@@ -7,20 +9,58 @@ unsigned next_player_number;
 #define A 5
 #define K 2
 #define RAND 14
-pid_t pid_of_team_leader;
-int players_pids[2*PLAYERS_PER_TEAM];
-
-
-void signal_handler(int signum){
-    //this function is for recieving the ball from previous player
-
-    //for team leader we must distinguish where the signal came from.
-
-    //it can come from USR1 or USR2 indicating that the ball is passed to the team leader.
-}
+pid_t pid_of_team1_leader;
+pid_t pid_of_team2_leader;
+pid_t next_player_pid;
 double short_pause_duration();
 
+
+void signal_handler(int signum) {
+
+    if (signum == SIGUSR1) {
+
+        
+        
+        sleep(1);
+        
+        if (player_number != 10) {
+
+            printf("sending ball %d -> %d\n",player_number, next_player_number);
+            fflush(stdout);
+            kill(next_player_pid, SIGUSR1);
+
+        }
+
+        else {
+
+            printf("sending ball %d -> %d\n",player_number, next_player_number);
+            fflush(stdout);
+            kill(next_player_pid, SIGUSR2);
+        }
+
+    }
+
+    if (signum == SIGUSR2) {
+
+        // only player 11 receives this signal (for now, testing purposes)
+
+        sleep(1);
+
+        kill(0, SIGQUIT);
+        printf("sending the ball to the other team lead\n");
+        fflush(stdout);
+
+        kill(pid_of_team1_leader, SIGUSR1);
+    }
+
+
+}
+
 int main(int argc, char* argv[]) {
+
+
+    signal(SIGUSR1, signal_handler);
+    signal(SIGUSR2, signal_handler);
 
     // TODO: if argc != numberOfArgs.. 
 
@@ -29,52 +69,39 @@ int main(int argc, char* argv[]) {
     char* arguments=malloc(50 * sizeof(char));
 
     for (int i = 1; i < argc; i++) {
-        
-        strcat(arguments, "  ");
-        strcat(arguments, argv[i]); 
-     }
 
-    pid_of_team_leader = atoi(argv[4]);
+        strcat(arguments, " ");
+        strcat(arguments, argv[i]); 
+    }
+
+    printf("Arguments: %s\n", arguments);
+
     player_number = atoi(argv[1]);
     energy = atoi(argv[2]);
     next_player_number = atoi(argv[3]);
+    pid_of_team1_leader = atoi(argv[4]);
+    pid_of_team2_leader = atoi(argv[5]);
+    next_player_pid = atoi(argv[6]); 
 
-    //printf("%d --> %d\n", player_number, next_player_number);
 
-    int fd;
+    if (player_number == 11) {
 
-    if (player_number > -1) {
-
-        if ((fd = open(FIFO1, O_RDONLY)) == -1) {
-            perror("error in openning FIFO");
-            exit(2);
+        int fd = open(FIFO1, O_RDONLY);
+        if (fd == -1) {
+            perror("Error opening FIFO1");
+            exit(-1);
         }
 
-        if (read(fd, players_pids, sizeof(int) * 2 * PLAYERS_PER_TEAM) == -1) {
-            perror("an error happend in writing to the fifo file\n");
-            exit(3);
+        if (read(fd, &pid_of_team1_leader, sizeof(pid_t)) == -1) {
+            perror("Error reading from FIFO1");
+            exit(-1);
         }
-        
-
-        for (int i = 0; i < 2* PLAYERS_PER_TEAM; i++) {
-            printf("%d ", players_pids[i]);
-        }
-        printf("\n");
-
 
         close(fd);
-          
-        if ((fd = open(FIFO1, O_WRONLY)) == -1) {
-            perror("error in FIFO open");
-        }
-    
-        if ((write(fd, players_pids, 2*PLAYERS_PER_TEAM*sizeof(int))) == -1) {
-
-            perror("error in writing");
-        }
-        close(fd);
-
+        printf("%d is the pid of team1 leader from process 11\n", pid_of_team1_leader);
     }
+
+    pause();
 
     return 0;
 }
@@ -85,3 +112,5 @@ double short_pause_duration() {
     int random_constant = 10 + rand() % 11; // number between 10 and 20
     return 50000*((double)A / pow((double)(energy + random_constant), (double)K));
 }
+
+
