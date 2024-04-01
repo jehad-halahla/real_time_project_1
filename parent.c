@@ -12,7 +12,7 @@ unsigned next_player; /* each process will have a different next player pid,
 
 int status, i;
 
-
+int number_of_processes_waiting_for_read = 0;
 //create structs 
 team team1;
 team team2;
@@ -23,25 +23,45 @@ void assign_initial_energy();
 void fork_children();
 void init_teams();
 
+void signal_handler(int signum) {
+
+    if (signum == SIGUSR1) {
+
+        number_of_processes_waiting_for_read++;
+    }
+}
+
 int main() {
+
     //create the FIFOs
     create_FIFOs();
     fork_children();
     init_teams();
-
-    int fd;
-    // if a team does not have a ball, the parent process will pass a ball to its team leader.
-   
-        if ((fd = open(FIFO1, O_WRONLY)) == -1) {
-            perror("error in FIFO open");
-        }
     
-        if ((write(fd, process_pid, 2*PLAYERS_PER_TEAM*sizeof(int))) == -1) {
 
-            perror("error in writing");
-        }
-        close(fd);
-        
+    int fd = open(FIFO1, O_WRONLY);
+
+    if (fd == -1) {
+        perror("Error opening FIFO1");
+        exit(-1);
+    }
+
+    if (write(fd, &process_pid[5], sizeof(pid_t)) == -1) {
+        perror("Error writing to FIFO1");
+        exit(-1);
+    }
+
+    close(fd);  
+
+    
+
+    kill(process_pid[11], SIGUSR1); 
+
+    
+    //wait for all pids
+
+    pause();
+    
     return 0;
 }
 
@@ -93,10 +113,10 @@ void fork_children(){
     pid_t next_player_pid;
 
 
-    char team1_leader_pid_arg[10];
-    char team2_leader_pid_arg[10];
+    char team1_leader_pid_arg[10]="-1";
+    char team2_leader_pid_arg[10]="-1";
 
-    char next_player_pid_arg[10];
+    char next_player_pid_arg[10]="-1";
 
     char next_pid_arg[10] = "-1";
 
@@ -141,8 +161,9 @@ void fork_children(){
             next_player = (i < PLAYERS_PER_TEAM) ? ((i+1) % PLAYERS_PER_TEAM) : 6 + ((i+1) % PLAYERS_PER_TEAM);
             
             sprintf(next_player_arg, "%d",next_player);
+            sprintf(next_player_pid_arg, "%d", process_pid[next_player]);
 
-            execlp("./child" ,"child.o",player_number_arg, energy_arg, next_player_arg,(i <= 5) ? team1_leader_pid_arg : team2_leader_pid_arg,/*current_pid_arg,*/ (const char*)NULL);
+            execlp("./child" ,"child.o",player_number_arg, energy_arg, next_player_arg, team1_leader_pid_arg, team2_leader_pid_arg,next_player_pid_arg, (const char*)NULL);
 
             perror("execvp failed.\n");
             
