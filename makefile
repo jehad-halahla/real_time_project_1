@@ -9,6 +9,7 @@ LIBS = -lm
 default: compile run
 
 compile:
+
 	@echo "Compiling..."
 	@$(CC) -o parent parent.c $(LIBS)
 	@$(CC) -o child child.c $(LIBS)

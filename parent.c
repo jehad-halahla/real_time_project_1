@@ -8,7 +8,6 @@ pid_t process_pid[2*PLAYERS_PER_TEAM];
 unsigned player_energy[2*PLAYERS_PER_TEAM]; 
 unsigned next_player; /* each process will have a different next player pid,
                        this is used to index the pids array and send the pid to the process when we use execlp. arg[3] */ 
-
 int status, i;
 
 
@@ -22,7 +21,9 @@ void assign_initial_energy();
 void fork_children();
 void init_teams();
 
+
 int main() {
+    
     //create the FIFOs
     create_FIFOs();
     fork_children();
@@ -72,6 +73,7 @@ void create_FIFOs()
 }
 
 void fork_children(){
+    
     for (i = 0; i < 2 * PLAYERS_PER_TEAM; i++) {
         //we will fork a child and execute the child program
         int current_pid;
@@ -107,7 +109,6 @@ void fork_children(){
                SIGKILL). Then, install a signal handler that detects if the current process is
                the parent process or not, and calls _exit() if it is not the parent process.(ibid, et al).
             */
-
             signal(SIGQUIT, SIG_IGN);
             kill(0, SIGQUIT);
             exit(2);
