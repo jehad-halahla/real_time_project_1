@@ -8,7 +8,16 @@ unsigned next_player_number;
 #define K 2
 #define RAND 14
 pid_t pid_of_team_leader;
+int players_pids[2*PLAYERS_PER_TEAM];
 
+
+void signal_handler(int signum){
+    //this function is for recieving the ball from previous player
+
+    //for team leader we must distinguish where the signal came from.
+
+    //it can come from USR1 or USR2 indicating that the ball is passed to the team leader.
+}
 double short_pause_duration();
 
 int main(int argc, char* argv[]) {
@@ -25,44 +34,47 @@ int main(int argc, char* argv[]) {
         strcat(arguments, argv[i]); 
      }
 
-        //printf("Child process with PID %d has args: %s\n", getpid(), arguments);
     pid_of_team_leader = atoi(argv[4]);
-
-    printf("%d is the pid of the team leader\n", pid_of_team_leader);
-
-    energy = atoi(argv[2]);
     player_number = atoi(argv[1]);
+    energy = atoi(argv[2]);
     next_player_number = atoi(argv[3]);
 
-    //    printf("short pause duration for child %d is %f and energy is %d\n", getpid(),short_pause_duration(), energy);
+    //printf("%d --> %d\n", player_number, next_player_number);
 
     int fd;
-    int arr[2];
 
-    if (player_number == 0) {
-
+    if (player_number > -1) {
 
         if ((fd = open(FIFO1, O_RDONLY)) == -1) {
             perror("error in openning FIFO");
             exit(2);
         }
 
-        if (read(fd, arr, sizeof(int) * 2) == -1) {
+        if (read(fd, players_pids, sizeof(int) * 2 * PLAYERS_PER_TEAM) == -1) {
             perror("an error happend in writing to the fifo file\n");
             exit(3);
         }
+        
 
-        for (int i = 0; i < 2; i++) {
-            printf("%d ", arr[i]);
+        for (int i = 0; i < 2* PLAYERS_PER_TEAM; i++) {
+            printf("%d ", players_pids[i]);
         }
+        printf("\n");
 
 
         close(fd);
+          
+        if ((fd = open(FIFO1, O_WRONLY)) == -1) {
+            perror("error in FIFO open");
+        }
+    
+        if ((write(fd, players_pids, 2*PLAYERS_PER_TEAM*sizeof(int))) == -1) {
+
+            perror("error in writing");
+        }
+        close(fd);
 
     }
-
-
-
 
     return 0;
 }

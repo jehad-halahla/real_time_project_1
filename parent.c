@@ -28,24 +28,20 @@ int main() {
     create_FIFOs();
     fork_children();
     init_teams();
+
     int fd;
     // if a team does not have a ball, the parent process will pass a ball to its team leader.
-    // 
-    //
-    //
-
-    int arr[2] = {2,3};
+   
+        if ((fd = open(FIFO1, O_WRONLY)) == -1) {
+            perror("error in FIFO open");
+        }
     
-    if ((fd = open(FIFO1, O_WRONLY)) == -1) {
-        perror("error in FIFO open");
-    }
+        if ((write(fd, process_pid, 2*PLAYERS_PER_TEAM*sizeof(int))) == -1) {
 
-    if ((write(fd, arr, 2*sizeof(int))) == -1) {
-
-        perror("error in writing");
-    }
-    close(fd);
-    
+            perror("error in writing");
+        }
+        close(fd);
+        
     return 0;
 }
 
@@ -94,11 +90,12 @@ void fork_children(){
 
     pid_t team1_lead_pid;
     pid_t team2_lead_pid;
+    pid_t next_player_pid;
+
 
     char team1_leader_pid_arg[10];
     char team2_leader_pid_arg[10];
 
-    pid_t next_player_pid;
     char next_player_pid_arg[10];
 
     char next_pid_arg[10] = "-1";
@@ -127,22 +124,22 @@ void fork_children(){
             sprintf(team1_leader_pid_arg, "%d", team1_lead_pid);
         }
 
-        else if (i == 11) {
+        else if (i == 11) { 
 
             team2_lead_pid = current_pid;
             sprintf(team2_leader_pid_arg, "%d", team2_lead_pid);
         }
 
-        // printf("%d is the pid of team leader in parent code\n", (i <= 5) ? team1_lead_pid : team2_lead_pid);
 
         // sprintf(next_player_arg, "%d",  :  process_pid[i+1]);
 
         if (current_pid == 0) {
-
             sprintf(player_number_arg, "%d", i);
+
             sprintf(energy_arg, "%d", player_energy[i]);
             // this is unlikely to be incorrect, but feel free to triple check it, since it can cause serious damage.
             next_player = (i < PLAYERS_PER_TEAM) ? ((i+1) % PLAYERS_PER_TEAM) : 6 + ((i+1) % PLAYERS_PER_TEAM);
+            
             sprintf(next_player_arg, "%d",next_player);
 
             execlp("./child" ,"child.o",player_number_arg, energy_arg, next_player_arg,(i <= 5) ? team1_leader_pid_arg : team2_leader_pid_arg,/*current_pid_arg,*/ (const char*)NULL);
