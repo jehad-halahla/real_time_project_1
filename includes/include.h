@@ -32,10 +32,12 @@ typedef struct team {
 } team;
 
 
+#define _XOPEN_SOURCE_EXTENDED 1
+
 #endif
 
 #ifndef ROUND_DURATION
-#define ROUND_DURATION 60 // in seconds
+#define ROUND_DURATION 10 // in seconds
 #endif
 
 #ifndef MAX_PLAYER_ENERGY

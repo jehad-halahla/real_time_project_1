@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
+// include sigignore()
+#include <signal.h>
 unsigned energy;
 unsigned player_number;
 unsigned next_player_number;
@@ -65,7 +67,18 @@ void signal_handler(int signum) {
 
     else if (signum == SIGCHLD) {
 
-      //  printf("entrered SIGCHLD from child\n");
+     //   sigignore(SIGUSR1);
+     //   sigignore(SIGUSR2);
+    
+        sigignore(SIGUSR1);
+        sigignore(SIGUSR2);
+
+        // we send a SIGCHILD to the parent. The parent then uses sigrlse to unblock the signals
+
+        // notify the parent that the round is over
+        kill(getppid(), SIGCHLD);
+
+        pause();
     }
 
 
