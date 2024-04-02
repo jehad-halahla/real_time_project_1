@@ -47,23 +47,27 @@ void signal_handler(int signum) {
         }
 
         close(fd);
+
+        sleep(1);
     }
 
     if (signum == SIGIO) {
 
-        int fd = open(FIFO2, O_RDONLY);
+        int fd = open(FIFO2, O_WRONLY);
 
         if (fd == -1) {
             perror("Error opening FIFO2");
             exit(-1);
         }
 
-        if (write(fd, &process_pid[0], sizeof(int)) == -1) {
+        if (write(fd, &process_pid[0], sizeof(pid_t)) == -1) {
             perror("Error writing to FIFO2");
             exit(-1);
         }
 
         close(fd);
+
+        sleep(1);
 
     }
 }
@@ -74,25 +78,40 @@ int main() {
     create_FIFOs();
     fork_children();
     init_teams();
-    
 
-    int fd = open(FIFO1, O_WRONLY);
+    struct sigaction sa_chld, sa_io;
 
-    if (fd == -1) {
-        perror("Error opening FIFO1");
-        exit(-1);
+    // Set up SIGCHLD handler
+    sa_chld.sa_handler = signal_handler;
+    sigemptyset(&sa_chld.sa_mask);
+    sa_chld.sa_flags = 0;
+    if (sigaction(SIGCHLD, &sa_chld, NULL) == -1) {
+        perror("sigaction for SIGCHLD");
+        exit(EXIT_FAILURE);
     }
 
-    if (write(fd, &process_pid[5], sizeof(pid_t)) == -1) {
-        perror("Error writing to FIFO1");
-        exit(-1);
+    // Set up SIGIO handler
+    sa_io.sa_handler = signal_handler;
+    sigemptyset(&sa_io.sa_mask);
+    sa_io.sa_flags = 0;
+    if (sigaction(SIGIO, &sa_io, NULL) == -1) {
+        perror("sigaction for SIGIO");
+        exit(EXIT_FAILURE);
     }
 
-    close(fd);  
+    sleep(1);
 
-    
+    kill(process_pid[5], SIGIO);
+
+    sleep(1);
+
+    kill(process_pid[11], SIGCHLD);
+
+    sleep(1);
 
     kill(process_pid[11], SIGUSR1); 
+
+
 
     
     //wait for all pids
