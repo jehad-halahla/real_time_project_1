@@ -25,7 +25,7 @@ void signal_handler(int signum) {
         
         if (player_number != 10) {
 
-            printf("sending ball %d -> %d\n",player_number, next_player_number);
+            printf("sending ball %d -> %d\n",getpid(), next_player_pid);
             fflush(stdout);
             kill(next_player_pid, SIGUSR1);
 
@@ -33,7 +33,7 @@ void signal_handler(int signum) {
 
         else {
 
-            printf("sending ball %d -> %d\n",player_number, next_player_number);
+            printf("sending ball %d -> %d\n",getpid(), next_player_pid);
             fflush(stdout);
             kill(next_player_pid, SIGUSR2);
         }
@@ -46,14 +46,13 @@ void signal_handler(int signum) {
 
         sleep(1);
 
+        printf("sending ball %d -> %d\n",player_number, pid_of_team1_leader);
+
         kill(0, SIGQUIT);
-        printf("sending the ball to the other team lead\n");
         fflush(stdout);
 
         kill(pid_of_team1_leader, SIGUSR1);
     }
-
-
 }
 
 int main(int argc, char* argv[]) {
@@ -74,6 +73,10 @@ int main(int argc, char* argv[]) {
         strcat(arguments, argv[i]); 
     }
 
+    char player_pid[10];
+    sprintf(player_pid, "%d", getpid());
+    strcat(arguments, " ");
+    strcat(arguments, player_pid);
     printf("Arguments: %s\n", arguments);
 
     player_number = atoi(argv[1]);
@@ -87,6 +90,7 @@ int main(int argc, char* argv[]) {
     if (player_number == 11) {
 
         int fd = open(FIFO1, O_RDONLY);
+
         if (fd == -1) {
             perror("Error opening FIFO1");
             exit(-1);
@@ -97,8 +101,28 @@ int main(int argc, char* argv[]) {
             exit(-1);
         }
 
+        kill(getppid(),SIGCHLD);
+
         close(fd);
+
         printf("%d is the pid of team1 leader from process 11\n", pid_of_team1_leader);
+    }
+
+    if (player_number == 5) {
+
+        int fd = open(FIFO1, O_RDONLY);
+        if (fd == -1) {
+            perror("Error opening FIFO1");
+            exit(-1);
+        }
+
+        if (read(fd, &next_player_pid, sizeof(pid_t)) == -1) {
+            perror("Error reading from FIFO1");
+            exit(-1);
+        }
+
+        close(fd);
+
     }
 
     pause();

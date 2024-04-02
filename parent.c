@@ -29,6 +29,43 @@ void signal_handler(int signum) {
 
         number_of_processes_waiting_for_read++;
     }
+
+    if (signum == SIGCHLD) {
+
+        int fd = open(FIFO2, O_WRONLY);
+        if (fd == -1) {
+            perror("Error opening FIFO2");
+            exit(-1);
+        }
+
+        int arr[2]  = {process_pid[5], process_pid[6]};
+
+
+        if (write(fd, arr, sizeof(int) * 2) == -1) {
+            perror("Error writing to FIFO2");
+            exit(-1);
+        }
+
+        close(fd);
+    }
+
+    if (signum == SIGIO) {
+
+        int fd = open(FIFO2, O_RDONLY);
+
+        if (fd == -1) {
+            perror("Error opening FIFO2");
+            exit(-1);
+        }
+
+        if (write(fd, &process_pid[0], sizeof(int)) == -1) {
+            perror("Error writing to FIFO2");
+            exit(-1);
+        }
+
+        close(fd);
+
+    }
 }
 
 int main() {
