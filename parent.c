@@ -68,9 +68,6 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-
-
-
     int fd = open(FIFO1, O_WRONLY);
 
     if (fd == -1) {
@@ -103,9 +100,10 @@ int main() {
 
     close(fd);
 
-
+    sleep(2);
+    //sending the signal to both team leads
     kill(process_pid[11], SIGUSR1); 
-
+    kill(process_pid[5], SIGUSR1);
     pause();
     
     return 0;
@@ -196,8 +194,6 @@ void fork_children(){
             sprintf(team2_leader_pid_arg, "%d", team2_lead_pid);
         }
 
-
-        // sprintf(next_player_arg, "%d",  :  process_pid[i+1]);
 
         if (current_pid == 0) {
             sprintf(player_number_arg, "%d", i);

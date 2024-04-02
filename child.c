@@ -21,41 +21,45 @@ void signal_handler(int signum) {
 
     if (signum == SIGUSR1) {
 
-        if (player_number != 10) {
+        if (player_number != 10 && player_number != 4) { //all players except player 10 and 4 
 
             printf("sending ball %d(%d) -> %d(%d)\n",getpid(),player_number , next_player_pid, next_player_number);
             fflush(stdout);
+            sleep(1);
             kill(next_player_pid, SIGUSR1);
 
         }
 
         else {
-
-            printf("sending ball %d(%d) -> %d(%d)\n",getpid(),player_number , next_player_pid, next_player_number);
+            //for players 10 and 4 to send back to team leads
+            printf("sending ball %d(%d) -> %d(%d) --> using signal SIGUSR2\n",getpid(),player_number , next_player_pid, next_player_number);
             fflush(stdout);
-            kill(next_player_pid, SIGUSR2);
+            sleep(1);
+            kill(next_player_pid, SIGUSR2); //here 11 recieves the ball from 10 and sends it to 5 , 4 recieves the ball from 5 and sends it to 11
         }
 
     }
 
     else if (signum == SIGUSR2) {
 
-        // only player 11 receives this signal (for now, testing purposes)
-
-
-        printf("sending ball %d(%d) -> %d(%d)\n",getpid(),player_number , pid_of_team1_leader, 5);
-
-        kill(0, SIGQUIT);
+        // only players 11 ,5  receive this signal (for now, testing purposes)
+        if(player_number == 11){
+            sleep(1);
+            printf("sending ball %d(%d) -> %d(%d)\n",getpid(),player_number , pid_of_team1_leader, 5);
+            kill(pid_of_team1_leader, SIGUSR1);
+        }
+        else{ //team 1 leader
+            sleep(1);
+            printf("sending ball %d(%d) -> %d(%d)\n",getpid(),player_number , pid_of_team2_leader, 11);
+            kill(pid_of_team2_leader, SIGUSR1);
+        }
+       // kill(pid_of_team1_leader, SIGQUIT);
         fflush(stdout);
-
-        kill(pid_of_team1_leader, SIGUSR1);
     }
 
     else if (signum == SIGCHLD) {
 
       //  printf("entrered SIGCHLD from child\n");
-
-
     }
 
 

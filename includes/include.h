@@ -50,8 +50,8 @@ typedef struct team {
 
 #define UISIG 7
 
-#define TEAM1_LEADER 0 // index of the team leader of team 1 in the pids array that is maintained by the parent.
-#define TEAM2_LEADER PLAYERS_PER_TEAM // index of the team leader of team 2.
-                                      //
+#define TEAM1_LEADER 5 // index of the team leader of team 1 in the pids array that is maintained by the parent.
+
+#define TEAM2_LEADER 11                                      //
 #define MAX_PAUSE_DURATION_MILLIS 1000
 #define MIN_PAUSE_DURATION_MILLIS 100
