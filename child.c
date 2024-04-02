@@ -54,6 +54,7 @@ void signal_handler(int signum) {
 
     else if (signum == SIGCHLD) {
 
+        printf("entrered SIGCHLD from child\n");
 
         if (player_number == 11) {
 
@@ -69,9 +70,9 @@ void signal_handler(int signum) {
                 exit(-1);
             }
 
-            kill(getppid(),SIGCHLD);
 
             close(fd);
+            kill(getppid(),SIGCHLD);
 
             printf("%d is the pid of team1 leader from process 11\n", pid_of_team1_leader);
         }
@@ -81,6 +82,7 @@ void signal_handler(int signum) {
 
     else if (signum == SIGIO) {
 
+        printf("entrered SIGIO from child\n");
 
 
         if (player_number == 5) {
@@ -97,9 +99,9 @@ void signal_handler(int signum) {
                 exit(-1);
             }
 
-            kill(getppid(),SIGIO);
 
             close(fd);
+            kill(getppid(),SIGIO);
 
         }
 
@@ -110,6 +112,32 @@ int main(int argc, char* argv[]) {
 
 
 
+
+
+    // TODO: if argc != numberOfArgs.. 
+
+    srand(getpid());
+
+    char* arguments=malloc(50 * sizeof(char));
+
+    for (int i = 1; i < argc; i++) {
+
+        strcat(arguments, " ");
+        strcat(arguments, argv[i]); 
+    }
+
+    char player_pid[10];
+    sprintf(player_pid, "%d", getpid());
+    strcat(arguments, " ");
+    strcat(arguments, player_pid);
+    printf("Arguments: %s\n", arguments);
+
+    player_number = atoi(argv[1]);
+    energy = atoi(argv[2]);
+    next_player_number = atoi(argv[3]);
+    pid_of_team1_leader = atoi(argv[4]);
+    pid_of_team2_leader = atoi(argv[5]);
+    next_player_pid = atoi(argv[6]); 
 
     struct sigaction sa_usr1, sa_usr2, sa_chld, sa_io;
 
@@ -148,34 +176,6 @@ int main(int argc, char* argv[]) {
         perror("sigaction for SIGIO");
         exit(EXIT_FAILURE);
     }
-
-
-    // TODO: if argc != numberOfArgs.. 
-
-    srand(getpid());
-
-    char* arguments=malloc(50 * sizeof(char));
-
-    for (int i = 1; i < argc; i++) {
-
-        strcat(arguments, " ");
-        strcat(arguments, argv[i]); 
-    }
-
-    char player_pid[10];
-    sprintf(player_pid, "%d", getpid());
-    strcat(arguments, " ");
-    strcat(arguments, player_pid);
-    printf("Arguments: %s\n", arguments);
-
-    player_number = atoi(argv[1]);
-    energy = atoi(argv[2]);
-    next_player_number = atoi(argv[3]);
-    pid_of_team1_leader = atoi(argv[4]);
-    pid_of_team2_leader = atoi(argv[5]);
-    next_player_pid = atoi(argv[6]); 
-
-
 
 
     pause();
