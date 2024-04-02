@@ -15,6 +15,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <stdbool.h>
 
 #define PLAYERS_PER_TEAM 6
 
@@ -27,17 +28,22 @@
 typedef struct team {
     unsigned int number_of_balls;
     unsigned int total_score; // incremented each round when balls are less than another team's balls.
+    unsigned int total_rounds_won;
 } team;
 
 
 #endif
 
-#ifndef GAME_DURATION
-#define GAME_DURATION 1
+#ifndef ROUND_DURATION
+#define ROUND_DURATION 60 // in seconds
 #endif
 
 #ifndef MAX_PLAYER_ENERGY
 #define MAX_PLAYER_ENERGY 40 // test value, might change later.
+#endif
+
+#ifndef MAX_NUMBER_OF_ROUNDS
+#define MAX_NUMBER_OF_ROUNDS 3
 #endif
 
 #ifndef MIN_PLAYER_ENERGY
@@ -46,7 +52,6 @@ typedef struct team {
 
 #define FIFO1 "/tmp/FIFO1" //for team 1
 #define FIFO2 "/tmp/FIFO2" // for team 2
-
 
 #define UISIG 7
 

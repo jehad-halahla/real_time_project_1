@@ -23,6 +23,11 @@ void assign_initial_energy();
 void fork_children();
 void init_teams();
 
+int current_round_number = 0;
+
+bool time_up = false;
+
+
 void signal_handler(int signum) {
 
     if (signum == SIGUSR1) {
@@ -39,6 +44,17 @@ void signal_handler(int signum) {
 
 
     fflush(stdout);
+}
+
+
+void doOneRound();
+
+void alarm_handler(int signum) {
+
+    time_up = true;
+
+
+    alarm(0);
 }
 
 int main() {
@@ -103,8 +119,25 @@ int main() {
     sleep(2);
     //sending the signal to both team leads
     kill(process_pid[11], SIGUSR1); 
-    kill(process_pid[5], SIGUSR1);
-    pause();
+
+
+
+    do {
+
+        alarm(ROUND_DURATION); // set the alarm for the round duration.
+        
+        
+        // do one round of the game
+
+        doOneRound();
+        
+
+
+
+    } while(current_round_number < 1 /*MAX_NUMBER_OF_ROUNDS*/);
+
+
+    
     
     return 0;
 }
@@ -125,6 +158,8 @@ void init_teams() {
     team1.total_score = 0;
     team2.number_of_balls = 0;
     team2.total_score = 0;
+    team1.total_rounds_won = 0;
+    team2.total_rounds_won = 0;
 }
 
 void create_FIFOs()
@@ -148,6 +183,38 @@ void create_FIFOs()
         perror("Error Creating Fifo");
         exit(-1);
     }
+}
+
+
+void doOneRound() {
+
+
+    // when a new round starts, children should ignore the previous signals. 
+    // To do this, we need to send a signal to to all children to tell them to ignore the SIGUSR1 and SIGUSR2 signals.
+
+   // for (int i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
+     //   kill(process_pid[i], SIGCHLD);
+   // }
+
+    if (team1.number_of_balls == 0) {
+    
+        // send a ball to team1 leader (send a signal to the team1 leader)
+
+        team1.number_of_balls++;
+        kill(process_pid[5], SIGUSR1);
+
+    }
+
+    if (team2.number_of_balls == 0) {
+    
+        // send a ball to team2 leader (send a signal to the team2 leader)
+
+        team2.number_of_balls++;
+        kill(process_pid[11], SIGUSR1);
+
+    }
+
+
 }
 
 void fork_children(){
