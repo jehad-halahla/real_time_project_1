@@ -16,44 +16,29 @@ double short_pause_duration();
 
 pid_t this_team_leader_pid;
 pid_t other_team_leader_pid;
+void send_ball_to_next_player();
+
 
 void signal_handler(int signum) {
 
+    // only team leaders can receive SIGUSR1, this way they know they have to send the ball to the next player in the team
+    // next team a team leader receives the ball, it receives the signal on SIGUSR2 and sends the ball to the other team leader
+    //
     if (signum == SIGUSR1) {
 
-        if (player_number != 10) {
+        printf("team leader %d received the ball\n", player_number);
 
-            printf("sending ball %d(%d) -> %d(%d)\n",getpid(),player_number , next_player_pid, next_player_number);
-            fflush(stdout);
-            kill(next_player_pid, SIGUSR1);
-
-        }
-
-        else {
-
-            printf("sending ball %d(%d) -> %d(%d)\n",getpid(),player_number , next_player_pid, next_player_number);
-            fflush(stdout);
-            kill(next_player_pid, SIGUSR2);
-        }
-
+        kill(next_player_pid, SIGUSR2);
     }
 
     else if (signum == SIGUSR2) {
 
-        // only player 11 receives this signal (for now, testing purposes)
-
-
-        printf("sending ball %d(%d) -> %d(%d)\n",getpid(),player_number , pid_of_team1_leader, 5);
-
-        kill(0, SIGQUIT);
-        fflush(stdout);
-
-        kill(pid_of_team1_leader, SIGUSR1);
+        printf("team leader %d received the ball\n", player_number);
+        send_ball_to_next_player();
     }
+        
 
     else if (signum == SIGCHLD) {
-
-      //  printf("entrered SIGCHLD from child\n");
 
 
     }
@@ -63,9 +48,9 @@ void signal_handler(int signum) {
 
        // printf("entrered SIGIO from child\n");
 
-
-
     }
+
+    fflush(stdout);
 }
 
 int main(int argc, char* argv[]) {
@@ -205,6 +190,33 @@ double short_pause_duration() {
 void send_ball_to_next_player() {
     
 
+    if (player_number < 5) {
+
+        printf("Sending: %d(%d) -> %d(%d)\n",getpid(), player_number,next_player_pid ,next_player_number);
+        kill(next_player_pid, SIGUSR2);
+
+    }
+    
+    else  if (player_number == 5) {
+
+        printf("Sending: %d(%d) -> %d(%d)\n",getpid(), player_number,other_team_leader_pid ,next_player_number);
+        kill(other_team_leader_pid, SIGUSR1);
+    
+    }
+   
+
+    if (player_number == 10) {
+        
+        printf("Sending: %d(%d) -> %d(%d)\n",getpid(), player_number,other_team_leader_pid ,next_player_number);
+        kill(pid_of_team1_leader, SIGUSR1);
+    }
+
+    else if (player_number > 5 && player_number < 11) {
+
+        printf("Sending: %d(%d) -> %d(%d)\n",getpid(), player_number,next_player_pid ,next_player_number);
+        kill(next_player_pid, SIGUSR2);
+    
+    }
 
 
 }
