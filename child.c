@@ -21,11 +21,10 @@ void signal_handler(int signum) {
 
         
         
-        sleep(1);
         
         if (player_number != 10) {
 
-            printf("sending ball %d -> %d\n",getpid(), next_player_pid);
+            printf("sending ball %d(%d) -> %d(%d)\n",getpid(),player_number , next_player_pid, next_player_number);
             fflush(stdout);
             kill(next_player_pid, SIGUSR1);
 
@@ -33,33 +32,123 @@ void signal_handler(int signum) {
 
         else {
 
-            printf("sending ball %d -> %d\n",getpid(), next_player_pid);
+            printf("sending ball %d(%d) -> %d(%d)\n",getpid(),player_number , next_player_pid, next_player_number);
             fflush(stdout);
             kill(next_player_pid, SIGUSR2);
         }
 
     }
 
-    if (signum == SIGUSR2) {
+    else if (signum == SIGUSR2) {
 
         // only player 11 receives this signal (for now, testing purposes)
 
-        sleep(1);
 
-        printf("sending ball %d -> %d\n",player_number, pid_of_team1_leader);
+        printf("sending ball %d(%d) -> %d(%d)\n",getpid(),player_number , pid_of_team1_leader, 5);
 
         kill(0, SIGQUIT);
         fflush(stdout);
 
         kill(pid_of_team1_leader, SIGUSR1);
     }
+
+    else if (signum == SIGCHLD) {
+
+
+        if (player_number == 11) {
+
+            int fd = open(FIFO1, O_RDONLY);
+
+            if (fd == -1) {
+                perror("Error opening FIFO1");
+                exit(-1);
+            }
+
+            if (read(fd, &pid_of_team1_leader, sizeof(pid_t)) == -1) {
+                perror("Error reading from FIFO1");
+                exit(-1);
+            }
+
+            kill(getppid(),SIGCHLD);
+
+            close(fd);
+
+            printf("%d is the pid of team1 leader from process 11\n", pid_of_team1_leader);
+        }
+
+    }
+
+
+    else if (signum == SIGIO) {
+
+
+
+        if (player_number == 5) {
+
+            sleep(1);
+            int fd = open(FIFO1, O_RDONLY);
+            if (fd == -1) {
+                perror("Error opening FIFO1");
+                exit(-1);
+            }
+
+            if (read(fd, &next_player_pid, sizeof(pid_t)) == -1) {
+                perror("Error reading from FIFO1");
+                exit(-1);
+            }
+
+            kill(getppid(),SIGIO);
+
+            close(fd);
+
+        }
+
+    }
 }
 
 int main(int argc, char* argv[]) {
 
 
-    signal(SIGUSR1, signal_handler);
-    signal(SIGUSR2, signal_handler);
+
+
+    struct sigaction sa_usr1, sa_usr2, sa_chld, sa_io;
+
+    // Set up SIGUSR1 handler
+    sa_usr1.sa_handler = signal_handler;
+    sigemptyset(&sa_usr1.sa_mask);
+    sa_usr1.sa_flags = 0;
+    if (sigaction(SIGUSR1, &sa_usr1, NULL) == -1) {
+        perror("sigaction for SIGUSR1");
+        exit(EXIT_FAILURE);
+    }
+
+    // Set up SIGUSR2 handler
+    sa_usr2.sa_handler = signal_handler;
+    sigemptyset(&sa_usr2.sa_mask);
+    sa_usr2.sa_flags = 0;
+    if (sigaction(SIGUSR2, &sa_usr2, NULL) == -1) {
+        perror("sigaction for SIGUSR2");
+        exit(EXIT_FAILURE);
+    }
+
+    // Set up SIGCHLD handler
+    sa_chld.sa_handler = signal_handler;
+    sigemptyset(&sa_chld.sa_mask);
+    sa_chld.sa_flags = 0;
+    if (sigaction(SIGCHLD, &sa_chld, NULL) == -1) {
+        perror("sigaction for SIGCHLD");
+        exit(EXIT_FAILURE);
+    }
+
+    // Set up SIGIO handler
+    sa_io.sa_handler = signal_handler;
+    sigemptyset(&sa_io.sa_mask);
+    sa_io.sa_flags = 0;
+    if (sigaction(SIGIO, &sa_io, NULL) == -1) {
+        perror("sigaction for SIGIO");
+        exit(EXIT_FAILURE);
+    }
+
 
     // TODO: if argc != numberOfArgs.. 
 
@@ -87,43 +176,7 @@ int main(int argc, char* argv[]) {
     next_player_pid = atoi(argv[6]); 
 
 
-    if (player_number == 11) {
 
-        int fd = open(FIFO1, O_RDONLY);
-
-        if (fd == -1) {
-            perror("Error opening FIFO1");
-            exit(-1);
-        }
-
-        if (read(fd, &pid_of_team1_leader, sizeof(pid_t)) == -1) {
-            perror("Error reading from FIFO1");
-            exit(-1);
-        }
-
-        kill(getppid(),SIGCHLD);
-
-        close(fd);
-
-        printf("%d is the pid of team1 leader from process 11\n", pid_of_team1_leader);
-    }
-
-    if (player_number == 5) {
-
-        int fd = open(FIFO1, O_RDONLY);
-        if (fd == -1) {
-            perror("Error opening FIFO1");
-            exit(-1);
-        }
-
-        if (read(fd, &next_player_pid, sizeof(pid_t)) == -1) {
-            perror("Error reading from FIFO1");
-            exit(-1);
-        }
-
-        close(fd);
-
-    }
 
     pause();
 
