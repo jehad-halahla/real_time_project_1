@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
+// include sigignore()
+#include <signal.h>
 unsigned energy;
 unsigned player_number;
 unsigned next_player_number;
@@ -65,7 +67,8 @@ void signal_handler(int signum) {
 
     else if (signum == SIGCHLD) {
 
-      //  printf("entrered SIGCHLD from child\n");
+        pause();
+
     }
 
 

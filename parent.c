@@ -43,6 +43,8 @@ void signal_handler(int signum) {
     }
 
 
+
+
     fflush(stdout);
 }
 
@@ -52,6 +54,20 @@ void doOneRound();
 void alarm_handler(int signum) {
 
     time_up = true;
+    
+    if (team1.number_of_balls < team2.number_of_balls) {
+        team1.total_score++;
+
+    }
+
+    else if (team1.number_of_balls > team2.number_of_balls) {
+        team2.total_score++;
+    }
+
+
+    for (int i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
+        kill(process_pid[i], SIGCHLD);
+    }
 
 
     alarm(0);
@@ -118,13 +134,11 @@ int main() {
 
     sleep(2);
     //sending the signal to both team leads
-    kill(process_pid[11], SIGUSR1); 
 
-
-
+    alarm(ROUND_DURATION); // set the alarm for the round duration.
+                           //
     do {
 
-        alarm(ROUND_DURATION); // set the alarm for the round duration.
         
         
         // do one round of the game
