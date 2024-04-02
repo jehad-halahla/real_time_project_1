@@ -67,8 +67,18 @@ void signal_handler(int signum) {
 
     else if (signum == SIGCHLD) {
 
-        pause();
+     //   sigignore(SIGUSR1);
+     //   sigignore(SIGUSR2);
+    
+        sigignore(SIGUSR1);
+        sigignore(SIGUSR2);
 
+        // we send a SIGCHILD to the parent. The parent then uses sigrlse to unblock the signals
+
+        // notify the parent that the round is over
+        kill(getppid(), SIGCHLD);
+
+        pause();
     }
 
 

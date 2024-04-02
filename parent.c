@@ -65,10 +65,11 @@ void alarm_handler(int signum) {
     }
 
 
+    // let all children ignore SIGUSR1 and SIGUSR2 signals
+
     for (int i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
         kill(process_pid[i], SIGCHLD);
     }
-
 
     alarm(0);
 }
@@ -80,7 +81,7 @@ int main() {
     fork_children();
     init_teams();
 
-    struct sigaction sa_chld, sa_io;
+    struct sigaction sa_chld, sa_io, sa_alarm;
 
     // Set up SIGCHLD handler
     sa_chld.sa_handler = signal_handler;
@@ -97,6 +98,16 @@ int main() {
     sa_io.sa_flags = 0;
     if (sigaction(SIGIO, &sa_io, NULL) == -1) {
         perror("sigaction for SIGIO");
+        exit(EXIT_FAILURE);
+    }
+
+
+    // add the alarm handler
+    sa_alarm.sa_handler = alarm_handler;
+    sigemptyset(&sa_alarm.sa_mask);
+    sa_alarm.sa_flags = 0;
+    if (sigaction(SIGALRM, &sa_alarm, NULL) == -1) {
+        perror("sigaction for SIGALRM");
         exit(EXIT_FAILURE);
     }
 
