@@ -30,48 +30,10 @@ void signal_handler(int signum) {
         number_of_processes_waiting_for_read++;
     }
 
-    if (signum == SIGCHLD) {
-
-        printf("entrered SIGCHLD from parent\n");
-
-        int fd = open(FIFO1, O_WRONLY);
-        if (fd == -1) {
-            perror("Error opening FIFO1");
-            exit(-1);
-        }
-
-        int arr[2]  = {process_pid[5], process_pid[6]};
-
-
-        if (write(fd, arr, sizeof(int) * 2) == -1) {
-            perror("Error writing to FIFOR1");
-            exit(-1);
-        }
-
-        close(fd);
-
-        sleep(1);
-    }
 
     if (signum == SIGIO) {
 
         printf("entrered SIGIO from parent\n");
-
-        int fd = open(FIFO1, O_WRONLY);
-
-        if (fd == -1) {
-            perror("Error opening FIFO1");
-            exit(-1);
-        }
-
-        if (write(fd, &process_pid[0], sizeof(pid_t)) == -1) {
-            perror("Error writing to FIFO1");
-            exit(-1);
-        }
-
-        close(fd);
-
-        sleep(1);
 
     }
 
@@ -107,21 +69,42 @@ int main() {
     }
 
 
-    sleep(1);
-    kill(process_pid[11], SIGCHLD);
-    sleep(1);
 
-    kill(process_pid[5], SIGIO);
-    sleep(1);
+
+    int fd = open(FIFO1, O_WRONLY);
+
+    if (fd == -1) {
+        perror("Error opening FIFO1");
+        exit(-1);
+    }
+
+    int arr[2]  = {process_pid[5], process_pid[6]};
+
+
+    if (write(fd, arr, sizeof(int) * 2) == -1) {
+        perror("Error writing to FIFOR1");
+        exit(-1);
+    }
+
+    close(fd);
+
+
+    fd = open(FIFO2, O_WRONLY);
+
+    if (fd == -1) {
+        perror("Error opening FIFO2");
+        exit(-1);
+    }
+
+    if (write(fd, &process_pid[0], sizeof(pid_t)) == -1) {
+        perror("Error writing to FIFO2");
+        exit(-1);
+    }
+
+    close(fd);
 
 
     kill(process_pid[11], SIGUSR1); 
-    sleep(1);
-
-
-
-    
-    //wait for all pids
 
     pause();
     
