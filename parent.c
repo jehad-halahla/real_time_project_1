@@ -43,8 +43,6 @@ void signal_handler(int signum) {
     }
 
 
-
-
     fflush(stdout);
 }
 
@@ -64,6 +62,8 @@ void alarm_handler(int signum) {
         team2.total_score++;
     }
 
+    printf("Team 1 score: %d\n", team1.total_score);
+    printf("Team 2 score: %d\n", team2.total_score);
 
     // let all children ignore SIGUSR1 and SIGUSR2 signals
 
@@ -71,7 +71,8 @@ void alarm_handler(int signum) {
         kill(process_pid[i], SIGCHLD);
     }
 
-    alarm(0);
+   // alarm(ROUND_DURATION); // set the alarm for the round duration.
+
 }
 
 int main() {
@@ -106,6 +107,7 @@ int main() {
     sa_alarm.sa_handler = alarm_handler;
     sigemptyset(&sa_alarm.sa_mask);
     sa_alarm.sa_flags = 0;
+
     if (sigaction(SIGALRM, &sa_alarm, NULL) == -1) {
         perror("sigaction for SIGALRM");
         exit(EXIT_FAILURE);
@@ -143,21 +145,20 @@ int main() {
 
     close(fd);
 
-    sleep(2);
     //sending the signal to both team leads
 
     alarm(ROUND_DURATION); // set the alarm for the round duration.
-                           //
+                           
     do {
 
-        
-        
         // do one round of the game
 
         doOneRound();
         
+        // sending a dummy signal to get out of the pause in the children processes.
 
 
+    //    current_round_number++;
 
     } while(current_round_number < 1 /*MAX_NUMBER_OF_ROUNDS*/);
 

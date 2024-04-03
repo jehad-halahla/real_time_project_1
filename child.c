@@ -20,12 +20,14 @@ pid_t this_team_leader_pid;
 pid_t other_team_leader_pid;
 void send_ball_to_next_player();
 
+struct sigaction sa_usr1, sa_usr2, sa_chld, sa_io, ignore_action;
+
+int sigchild_number = 0;
 
 void signal_handler(int signum) {
 
     // only team leaders can receive SIGUSR1, this way they know they have to send the ball to the next player in the team
     // next team a team leader receives the ball, it receives the signal on SIGUSR2 and sends the ball to the other team leader
-    //
     if (signum == SIGUSR1) {
 
         if (player_number != 10 && player_number != 4) { //all players except player 10 and 4 
@@ -67,35 +69,56 @@ void signal_handler(int signum) {
 
     else if (signum == SIGCHLD) {
 
-     //   sigignore(SIGUSR1);
-     //   sigignore(SIGUSR2);
+        if (sigchild_number % 2 == 0) {
+            sigignore(SIGUSR1);
+            sigignore(SIGUSR2);
+        }
+
+        else {
+
+            sigaction(SIGUSR1, &sa_usr1, NULL);
+            sigaction(SIGUSR2, &sa_usr2, NULL);
+        }
     
-        sigignore(SIGUSR1);
-        sigignore(SIGUSR2);
+        sigchild_number++;
 
-        // we send a SIGCHILD to the parent. The parent then uses sigrlse to unblock the signals
+        // we should use sigaction to ignore the signals
 
-        // notify the parent that the round is over
-        kill(getppid(), SIGCHLD);
+        /*
 
-        pause();
+        if (sigaction(SIGUSR1, &ignore_action, NULL) == -1) {
+            perror("sigaction for SIGUSR1");
+            exit(EXIT_FAILURE);
+        }
+
+        if (sigaction(SIGUSR2, &ignore_action, NULL) == -1) {
+            perror("sigaction for SIGUSR2");
+            exit(EXIT_FAILURE);
+        }
+
+        */
+
+//        pause();
     }
 
 
     else if (signum == SIGIO) {
 
-       // printf("entrered SIGIO from child\n");
+        printf("entrered SIGIO from child\n");
 
     }
 
     fflush(stdout);
+
 }
+
 
 int main(int argc, char* argv[]) {
 
-
-    
-
+    // Set the handler to ignore
+    ignore_action.sa_handler = SIG_IGN;
+    sigemptyset(&ignore_action.sa_mask);
+    ignore_action.sa_flags = 0;
 
     // TODO: if argc != numberOfArgs.. 
 
@@ -122,7 +145,6 @@ int main(int argc, char* argv[]) {
     pid_of_team2_leader = atoi(argv[5]);
     next_player_pid = atoi(argv[6]); 
 
-    struct sigaction sa_usr1, sa_usr2, sa_chld, sa_io;
 
     // Set up SIGUSR1 handler
     sa_usr1.sa_handler = signal_handler;
@@ -212,6 +234,7 @@ int main(int argc, char* argv[]) {
     }
 
     while (1) {
+        
         pause();
     }
 
