@@ -27,12 +27,21 @@ int current_round_number = 0;
 
 bool time_up = false;
 
+struct sigaction sa_chld, sa_io, sa_alarm, sa_usr1, sa_usr2;;
+
 
 void signal_handler(int signum) {
 
     if (signum == SIGUSR1) {
 
-        number_of_processes_waiting_for_read++;
+        team1.number_of_balls++;
+        team2.number_of_balls--;
+    }
+
+    if (signum == SIGUSR2) {
+
+        team2.number_of_balls++;
+        team1.number_of_balls--;
     }
 
 
@@ -62,8 +71,8 @@ void alarm_handler(int signum) {
         team2.total_score++;
     }
 
-    printf("Team 1 score: %d\n", team1.total_score);
-    printf("Team 2 score: %d\n", team2.total_score);
+    printf("Team 1 score: %d, and bumber of balls: %d\n", team1.total_score, team1.number_of_balls);
+    printf("Team 2 score: %d, and bumber of balls: %d\n", team2.total_score, team2.number_of_balls);
 
     // let all children ignore SIGUSR1 and SIGUSR2 signals
 
@@ -82,7 +91,6 @@ int main() {
     fork_children();
     init_teams();
 
-    struct sigaction sa_chld, sa_io, sa_alarm;
 
     // Set up SIGCHLD handler
     sa_chld.sa_handler = signal_handler;
@@ -112,6 +120,26 @@ int main() {
         perror("sigaction for SIGALRM");
         exit(EXIT_FAILURE);
     }
+
+
+    sa_usr1.sa_handler = signal_handler;
+    sigemptyset(&sa_usr1.sa_mask);
+    sa_usr1.sa_flags = 0;
+
+    if (sigaction(SIGUSR1, &sa_usr1, NULL) == -1) {
+        perror("sigaction for SIGUSR1");
+        exit(EXIT_FAILURE);
+    }
+
+    sa_usr2.sa_handler = signal_handler;
+    sigemptyset(&sa_usr2.sa_mask);
+    sa_usr2.sa_flags = 0;
+
+    if (sigaction(SIGUSR2, &sa_usr2, NULL) == -1) {
+        perror("sigaction for SIGUSR2");
+        exit(EXIT_FAILURE);
+    }
+
 
     int fd = open(FIFO1, O_WRONLY);
 
@@ -158,11 +186,16 @@ int main() {
         // sending a dummy signal to get out of the pause in the children processes.
 
 
-    //    current_round_number++;
+        current_round_number++;
 
     } while(current_round_number < 1 /*MAX_NUMBER_OF_ROUNDS*/);
 
 
+    // wait for all children to finish
+
+    for (int i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
+        waitpid(process_pid[i], &status, 0);
+    }
     
     
     return 0;
@@ -180,6 +213,7 @@ void assign_initial_energy() {
 }
 
 void init_teams() {
+
     team1.number_of_balls = 0;
     team1.total_score = 0;
     team2.number_of_balls = 0;
@@ -221,14 +255,19 @@ void doOneRound() {
 
 // send a ball to team1 leader (send a signal to the team1 leader)
 
-    team1.number_of_balls++;
-    kill(process_pid[5], SIGUSR1);
-
+    if (team1.number_of_balls == 0) {
+        team1.number_of_balls++;
+        kill(process_pid[5], SIGUSR1);
+        sleep(1);
+        kill(process_pid[5], SIGUSR1);
+    }
 
     // send a ball to team2 leader (send a signal to the team2 leader)
-
-    team2.number_of_balls++;
-    kill(process_pid[11], SIGUSR1);
+    if (team2.number_of_balls == 0) {
+        team2.number_of_balls++;
+        kill(process_pid[11], SIGUSR1);
+    }
+    
 
   //  }
 

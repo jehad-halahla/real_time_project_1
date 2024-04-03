@@ -51,6 +51,7 @@ void signal_handler(int signum) {
             printf("sending ball %d(%d) -> %d(%d) --> using signal SIGUSR2\n",getpid(),player_number , next_player_pid, next_player_number);
             fflush(stdout);
             sleep(1);
+
             kill(next_player_pid, SIGUSR2); //here 11 recieves the ball from 10 and sends it to 5 , 4 recieves the ball from 5 and sends it to 11
         }
 
@@ -66,12 +67,19 @@ void signal_handler(int signum) {
         if(player_number == 11){
             sleep(1);
             printf("sending ball %d(%d) -> %d(%d)\n",getpid(),player_number , pid_of_team1_leader, 5);
+
+            kill(getppid(), SIGUSR1); // send a signal to the parent process to change count of balls
+
             kill(pid_of_team1_leader, SIGUSR1);
         }
         else{ //team 1 leader
             sleep(1);
             printf("sending ball %d(%d) -> %d(%d)\n",getpid(),player_number , pid_of_team2_leader, 11);
+
+            kill(getppid(), SIGUSR2); // send a signal to the parent process to change count of balls
+                                      //
             kill(pid_of_team2_leader, SIGUSR1);
+
         }
        // kill(pid_of_team1_leader, SIGQUIT);
         fflush(stdout);
@@ -86,7 +94,7 @@ void signal_handler(int signum) {
         ignore_usr1 = true;
         ignore_usr2 = true;
 
-        usleep(0.5 * 100000);
+        usleep(0.5 * 1000000);
 
         sigaction(SIGUSR1, &sa_usr1, NULL);
         sigaction(SIGUSR2, &sa_usr2, NULL);
@@ -110,7 +118,7 @@ void signal_handler(int signum) {
 
         */
 
-//        pause();
+        pause();
     }
 
 
@@ -151,7 +159,7 @@ int main(int argc, char* argv[]) {
     sprintf(player_pid, "%d", getpid());
     strcat(arguments, " ");
     strcat(arguments, player_pid);
-    printf("Arguments: %s\n", arguments);
+   //  printf("Arguments: %s\n", arguments);
 
     player_number = atoi(argv[1]);
     energy = atoi(argv[2]);
