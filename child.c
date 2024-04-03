@@ -20,7 +20,10 @@ pid_t this_team_leader_pid;
 pid_t other_team_leader_pid;
 void send_ball_to_next_player();
 
-struct sigaction sa_usr1, sa_usr2, sa_chld, sa_io, ignore_action;
+bool ignore_usr1 = false;
+bool ignore_usr2 = false;
+
+struct sigaction sa_usr1, sa_usr2, sa_chld, sa_io, ignore_action, empty_action;
 
 int sigchild_number = 0;
 
@@ -29,6 +32,10 @@ void signal_handler(int signum) {
     // only team leaders can receive SIGUSR1, this way they know they have to send the ball to the next player in the team
     // next team a team leader receives the ball, it receives the signal on SIGUSR2 and sends the ball to the other team leader
     if (signum == SIGUSR1) {
+
+        if (ignore_usr1) {
+            return;
+        }
 
         if (player_number != 10 && player_number != 4) { //all players except player 10 and 4 
 
@@ -51,6 +58,10 @@ void signal_handler(int signum) {
 
     else if (signum == SIGUSR2) {
 
+        if (ignore_usr2) {
+            return;
+        }
+
         // only players 11 ,5  receive this signal (for now, testing purposes)
         if(player_number == 11){
             sleep(1);
@@ -69,18 +80,19 @@ void signal_handler(int signum) {
 
     else if (signum == SIGCHLD) {
 
-        if (sigchild_number % 2 == 0) {
-            sigignore(SIGUSR1);
-            sigignore(SIGUSR2);
-        }
+        sigignore(SIGUSR1);
+        sigignore(SIGUSR2);
 
-        else {
+        ignore_usr1 = true;
+        ignore_usr2 = true;
 
-            sigaction(SIGUSR1, &sa_usr1, NULL);
-            sigaction(SIGUSR2, &sa_usr2, NULL);
-        }
-    
-        sigchild_number++;
+        usleep(0.5 * 100000);
+
+        sigaction(SIGUSR1, &sa_usr1, NULL);
+        sigaction(SIGUSR2, &sa_usr2, NULL);
+
+        ignore_usr1 = false;
+        ignore_usr2 = false;
 
         // we should use sigaction to ignore the signals
 
@@ -111,6 +123,9 @@ void signal_handler(int signum) {
     fflush(stdout);
 
 }
+
+
+void dummy_handler(int signum);
 
 
 int main(int argc, char* argv[]) {
@@ -181,6 +196,10 @@ int main(int argc, char* argv[]) {
         perror("sigaction for SIGIO");
         exit(EXIT_FAILURE);
     }
+
+    empty_action.sa_handler = dummy_handler;
+    sigemptyset(&empty_action.sa_mask);
+    empty_action.sa_flags = 0;
 
 
     // normalizing variables for each player
@@ -280,4 +299,10 @@ void send_ball_to_next_player() {
     }
 
 
+}
+
+
+void dummy_handler(int signum) {
+    // do nothing
+    return;
 }
