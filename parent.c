@@ -215,31 +215,22 @@ void create_FIFOs()
 void doOneRound() {
 
 
-    // when a new round starts, children should ignore the previous signals. 
-    // To do this, we need to send a signal to to all children to tell them to ignore the SIGUSR1 and SIGUSR2 signals.
+//    while (!time_up) {
 
-   // for (int i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
-     //   kill(process_pid[i], SIGCHLD);
-   // }
 
-    if (team1.number_of_balls == 0) {
-    
-        // send a ball to team1 leader (send a signal to the team1 leader)
 
-        team1.number_of_balls++;
-        kill(process_pid[5], SIGUSR1);
+// send a ball to team1 leader (send a signal to the team1 leader)
 
-    }
+    team1.number_of_balls++;
+    kill(process_pid[5], SIGUSR1);
 
-    if (team2.number_of_balls == 0) {
-    
-        // send a ball to team2 leader (send a signal to the team2 leader)
 
-        team2.number_of_balls++;
-        kill(process_pid[11], SIGUSR1);
+    // send a ball to team2 leader (send a signal to the team2 leader)
 
-    }
+    team2.number_of_balls++;
+    kill(process_pid[11], SIGUSR1);
 
+  //  }
 
 }
 
