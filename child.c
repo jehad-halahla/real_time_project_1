@@ -107,7 +107,7 @@ void signal_handler_sigchild(int signum) {
         ignore_usr1 = true;
         ignore_usr2 = true;
 
-        usleep(0.5 * 1000000);
+        usleep(0.5 * 100000);
 
         sigaction(SIGUSR1, &sa_usr1, NULL);
         sigaction(SIGUSR2, &sa_usr2, NULL);
@@ -131,7 +131,7 @@ void signal_handler_sigchild(int signum) {
 
         */
 
-        pause();
+      //  pause();
     }
 
 
