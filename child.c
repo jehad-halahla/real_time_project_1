@@ -27,7 +27,9 @@ struct sigaction sa_usr1, sa_usr2, sa_chld, sa_io, ignore_action, empty_action;
 
 int sigchild_number = 0;
 
-void signal_handler(int signum) {
+
+void signal_handler_usr1(int signum) {
+
 
     // only team leaders can receive SIGUSR1, this way they know they have to send the ball to the next player in the team
     // next team a team leader receives the ball, it receives the signal on SIGUSR2 and sends the ball to the other team leader
@@ -57,7 +59,14 @@ void signal_handler(int signum) {
 
     }
 
-    else if (signum == SIGUSR2) {
+    fflush(stdout);
+
+}
+
+
+void signal_handler_usr2 (int signum) {
+
+    if (signum == SIGUSR2) {
 
         if (ignore_usr2) {
             return;
@@ -81,12 +90,16 @@ void signal_handler(int signum) {
             kill(pid_of_team2_leader, SIGUSR1);
 
         }
-       // kill(pid_of_team1_leader, SIGQUIT);
-        fflush(stdout);
+        // kill(pid_of_team1_leader, SIGQUIT);
     }
-        
 
-    else if (signum == SIGCHLD) {
+    fflush(stdout);
+}
+
+void signal_handler_sigchild(int signum) {
+
+
+    if (signum == SIGCHLD) {
 
         sigignore(SIGUSR1);
         sigignore(SIGUSR2);
@@ -122,14 +135,7 @@ void signal_handler(int signum) {
     }
 
 
-    else if (signum == SIGIO) {
-
-        printf("entrered SIGIO from child\n");
-
-    }
-
     fflush(stdout);
-
 }
 
 
@@ -170,7 +176,7 @@ int main(int argc, char* argv[]) {
 
 
     // Set up SIGUSR1 handler
-    sa_usr1.sa_handler = signal_handler;
+    sa_usr1.sa_handler = signal_handler_usr1;
     sigemptyset(&sa_usr1.sa_mask);
     sa_usr1.sa_flags = 0;
     if (sigaction(SIGUSR1, &sa_usr1, NULL) == -1) {
@@ -179,7 +185,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Set up SIGUSR2 handler
-    sa_usr2.sa_handler = signal_handler;
+    sa_usr2.sa_handler = signal_handler_usr2;
     sigemptyset(&sa_usr2.sa_mask);
     sa_usr2.sa_flags = 0;
     if (sigaction(SIGUSR2, &sa_usr2, NULL) == -1) {
@@ -188,7 +194,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Set up SIGCHLD handler
-    sa_chld.sa_handler = signal_handler;
+    sa_chld.sa_handler = signal_handler_sigchild;
     sigemptyset(&sa_chld.sa_mask);
     sa_chld.sa_flags = 0;
     if (sigaction(SIGCHLD, &sa_chld, NULL) == -1) {
@@ -196,7 +202,7 @@ int main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    // Set up SIGIO handler
+    /* Set up SIGIO handler
     sa_io.sa_handler = signal_handler;
     sigemptyset(&sa_io.sa_mask);
     sa_io.sa_flags = 0;
@@ -204,6 +210,7 @@ int main(int argc, char* argv[]) {
         perror("sigaction for SIGIO");
         exit(EXIT_FAILURE);
     }
+    */
 
     empty_action.sa_handler = dummy_handler;
     sigemptyset(&empty_action.sa_mask);

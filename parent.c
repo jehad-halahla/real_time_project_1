@@ -36,12 +36,23 @@ void signal_handler(int signum) {
 
         team1.number_of_balls++;
         team2.number_of_balls--;
+
+        // if team2 has no balls, send a signal to the team2 leader to get a ball. 
+        if (team2.number_of_balls == 0) {
+            kill(process_pid[11], SIGUSR1);
+        }
+
     }
 
     if (signum == SIGUSR2) {
 
         team2.number_of_balls++;
         team1.number_of_balls--;
+
+        // if team1 has no balls, send a signal to the team1 leader to get a ball.
+        if (team1.number_of_balls == 0) {
+            kill(process_pid[5], SIGUSR1);
+        }
     }
 
 
@@ -258,8 +269,8 @@ void doOneRound() {
     if (team1.number_of_balls == 0) {
         team1.number_of_balls++;
         kill(process_pid[5], SIGUSR1);
-        sleep(1);
-        kill(process_pid[5], SIGUSR1);
+        //sleep(1);
+       // kill(process_pid[5], SIGUSR1);
     }
 
     // send a ball to team2 leader (send a signal to the team2 leader)
