@@ -116,6 +116,7 @@ void alarm_handler(int signum) {
         
         for (int i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
             kill(process_pid[i], SIGKILL);
+            usleep(1000);
         }
 
         exit(0);
@@ -276,30 +277,39 @@ void create_FIFOs()
 
 void doOneRound() {
 
+    for (int i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
+        kill(process_pid[i], SIGCHLD);
+        usleep(1000);
+    }
+    
 
-//    while (!time_up) {
-
+    team1.number_of_balls = 0;
+    team2.number_of_balls = 0;
 
     current_round_number++;
     alarm(ROUND_DURATION); // set the alarm for the round duration.
 
-// send a ball to team1 leader (send a signal to the team1 leader)
-
-    if (team1.number_of_balls == 0) {
-        team1.number_of_balls++;
-        kill(process_pid[5], SIGUSR1);
-        //sleep(1);
-       // kill(process_pid[5], SIGUSR1);
-    }
+    // send a ball to team1 leader (send a signal to the team1 leader)
+    team1.number_of_balls+=4;
+    kill(process_pid[5], SIGUSR1);
+    usleep(1000);
+    kill(process_pid[5], SIGUSR1);
+    usleep(1000);
+    kill(process_pid[5], SIGUSR1);
+    usleep(1000);
+    kill(process_pid[5], SIGUSR1);
+    usleep(1000);
 
     // send a ball to team2 leader (send a signal to the team2 leader)
-    if (team2.number_of_balls == 0) {
-        team2.number_of_balls++;
-       // kill(process_pid[11], SIGUSR1);
-    }
-    
-
-  //  }
+    team2.number_of_balls+=4;
+    kill(process_pid[11], SIGUSR1);
+    usleep(1000);
+    kill(process_pid[11], SIGUSR1);
+    usleep(1000);
+    kill(process_pid[11], SIGUSR1);
+    usleep(1000);
+    kill(process_pid[11], SIGUSR1);
+    usleep(1000);
 
 }
 

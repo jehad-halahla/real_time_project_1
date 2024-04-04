@@ -1,5 +1,6 @@
 #include "includes/include.h"
 #include <bits/types/sigset_t.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -20,13 +21,13 @@ pid_t this_team_leader_pid;
 pid_t other_team_leader_pid;
 void send_ball_to_next_player();
 
-bool ignore_usr1 = false;
-bool ignore_usr2 = false;
+bool ignore_usr1_usr2 = false;
 
 struct sigaction sa_usr1, sa_usr2, sa_chld, sa_io, ignore_action, empty_action;
 
 int sigchild_number = 0;
 
+bool next_round_started = false;
 
 void signal_handler_usr1(int signum) {
 
@@ -35,7 +36,7 @@ void signal_handler_usr1(int signum) {
     // next team a team leader receives the ball, it receives the signal on SIGUSR2 and sends the ball to the other team leader
     if (signum == SIGUSR1) {
 
-        if (ignore_usr1) {
+        if (ignore_usr1_usr2) {
             return;
         }
 
@@ -68,7 +69,7 @@ void signal_handler_usr2 (int signum) {
 
     if (signum == SIGUSR2) {
 
-        if (ignore_usr2) {
+        if (ignore_usr1_usr2) {
             return;
         }
 
@@ -81,7 +82,8 @@ void signal_handler_usr2 (int signum) {
 
             kill(pid_of_team1_leader, SIGUSR1);
         }
-        else{ //team 1 leader
+
+        else { //team 1 leader
             sleep(1);
             printf("sending ball %d(%d) -> %d(%d)\n",getpid(),player_number , pid_of_team2_leader, 11);
 
@@ -101,39 +103,29 @@ void signal_handler_sigchild(int signum) {
 
     if (signum == SIGCHLD) {
 
-        sigignore(SIGUSR1);
-        sigignore(SIGUSR2);
+        if (next_round_started) {
 
-        ignore_usr1 = true;
-        ignore_usr2 = true;
+            sigignore(SIGUSR1);
+            sigignore(SIGUSR2);
 
-        usleep(0.5 * 100000);
+            ignore_usr1_usr2 = true;
 
-        sigaction(SIGUSR1, &sa_usr1, NULL);
-        sigaction(SIGUSR2, &sa_usr2, NULL);
-
-        ignore_usr1 = false;
-        ignore_usr2 = false;
-
-        // we should use sigaction to ignore the signals
-
-        /*
-
-        if (sigaction(SIGUSR1, &ignore_action, NULL) == -1) {
-            perror("sigaction for SIGUSR1");
-            exit(EXIT_FAILURE);
+            //while (!next_round_started) {
+              //  pause();
+           // }
         }
 
-        if (sigaction(SIGUSR2, &ignore_action, NULL) == -1) {
-            perror("sigaction for SIGUSR2");
-            exit(EXIT_FAILURE);
+        else {
+
+            sigaction(SIGUSR1, &sa_usr1, NULL);
+            sigaction(SIGUSR2, &sa_usr2, NULL);
+
+            ignore_usr1_usr2 = false;
+
         }
 
-        */
-
-      //  pause();
+        next_round_started = !next_round_started;
     }
-
 
     fflush(stdout);
 }
