@@ -36,12 +36,23 @@ void signal_handler(int signum) {
 
         team1.number_of_balls++;
         team2.number_of_balls--;
+
+        // if team2 has no balls, send a signal to the team2 leader to get a ball. 
+        if (team2.number_of_balls == 0) {
+            kill(process_pid[11], SIGUSR1);
+        }
+
     }
 
     if (signum == SIGUSR2) {
 
         team2.number_of_balls++;
         team1.number_of_balls--;
+
+        // if team1 has no balls, send a signal to the team1 leader to get a ball.
+        if (team1.number_of_balls == 0) {
+            kill(process_pid[5], SIGUSR1);
+        }
     }
 
 
@@ -80,7 +91,36 @@ void alarm_handler(int signum) {
         kill(process_pid[i], SIGCHLD);
     }
 
-   // alarm(ROUND_DURATION); // set the alarm for the round duration.
+
+    if (current_round_number < MAX_NUMBER_OF_ROUNDS) {
+        doOneRound();
+    }
+
+    else {
+        // print the final scores and the winner
+        if (team1.total_score > team2.total_score) {
+            printf("Team 1 wins\n");
+        }
+
+        else if (team1.total_score < team2.total_score) {
+            printf("Team 2 wins\n");
+        }
+
+        else {
+            printf("It's a tie\n");
+        }
+
+        // remove the FIFOs
+        unlink(FIFO1);
+        unlink(FIFO2);
+        
+        for (int i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
+            kill(process_pid[i], SIGKILL);
+        }
+
+        exit(0);
+    }
+
 
 }
 
@@ -174,23 +214,11 @@ int main() {
     close(fd);
 
     //sending the signal to both team leads
+    //
 
-    alarm(ROUND_DURATION); // set the alarm for the round duration.
-                           
-    do {
+    doOneRound();
 
-        // do one round of the game
-
-        doOneRound();
-        
-        // sending a dummy signal to get out of the pause in the children processes.
-
-
-        current_round_number++;
-
-    } while(current_round_number < 1 /*MAX_NUMBER_OF_ROUNDS*/);
-
-
+    
     // wait for all children to finish
 
     for (int i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
@@ -252,20 +280,22 @@ void doOneRound() {
 //    while (!time_up) {
 
 
+    current_round_number++;
+    alarm(ROUND_DURATION); // set the alarm for the round duration.
 
 // send a ball to team1 leader (send a signal to the team1 leader)
 
     if (team1.number_of_balls == 0) {
         team1.number_of_balls++;
         kill(process_pid[5], SIGUSR1);
-        sleep(1);
-        kill(process_pid[5], SIGUSR1);
+        //sleep(1);
+       // kill(process_pid[5], SIGUSR1);
     }
 
     // send a ball to team2 leader (send a signal to the team2 leader)
     if (team2.number_of_balls == 0) {
         team2.number_of_balls++;
-        kill(process_pid[11], SIGUSR1);
+       // kill(process_pid[11], SIGUSR1);
     }
     
 
