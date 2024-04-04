@@ -5,7 +5,8 @@
 const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 600;
 const float PI = 3.14159265359f;
-#define  NUM_PLAYERS_PER_TEAM  6
+#define NUM_PLAYERS_PER_TEAM 8
+
 struct Ball {
     float x;
     float y;
@@ -18,12 +19,14 @@ struct Player {
     float x;
     float y;
 };
-void updateBallPosition(struct Ball* ball, struct Player* targetPlayer, float speed);
+
+void updateBallPosition(struct Ball *ball, struct Player *targetPlayer, float speed);
+void passBall(struct Ball *ball, struct Player *targetPlayer, float speed);
 
 struct Ball blueBall, redBall;
 struct Player blueTeam[NUM_PLAYERS_PER_TEAM], redTeam[NUM_PLAYERS_PER_TEAM];
-int blueActivePlayer = 0; // Index of the player currently in possession of the blue ball
-int redActivePlayer = 0;  // Index of the player currently in possession of the red ball
+int blueActivePlayer = NUM_PLAYERS_PER_TEAM - 1; // Index of the player currently in possession of the blue ball
+int redActivePlayer = NUM_PLAYERS_PER_TEAM - 1;  // Index of the player currently in possession of the red ball
 
 void drawSquare(float x, float y, float size, float r, float g, float b) {
     glColor3f(r, g, b);
@@ -42,8 +45,17 @@ void drawBall(float x, float y, float size, float r, float g, float b) {
     glTranslatef(-x, -y, 0.0f);
 }
 
-void drawPlayers(struct Player team[], float r, float g, float b) {
-    for (int i = 0; i < NUM_PLAYERS_PER_TEAM; ++i) {
+void drawPlayers(struct Player team[], float r, float g, float b, int numPlayers, float offsetX, float offsetY) {
+    float centerX = offsetX;
+    float centerY = offsetY;
+    float radius = 0.4f;
+
+    for (int i = 0; i < numPlayers; ++i) {
+        team[i].x = centerX + radius * cos(2 * PI * i / numPlayers);
+        team[i].y = centerY + radius * sin(2 * PI * i / numPlayers);
+    }
+
+    for (int i = 0; i < numPlayers; ++i) {
         if (i == 0) {
             if (r == 1.0f && g == 0.0f && b == 0.0f) // Red team
                 drawSquare(team[i].x, team[i].y, 0.05f, 0.0f, 1.0f, 0.0f); // Green color for first red player
@@ -58,11 +70,11 @@ void drawPlayers(struct Player team[], float r, float g, float b) {
 void display() {
     glClear(GL_COLOR_BUFFER_BIT);
 
-    // Draw blue team
-    drawPlayers(blueTeam, 0.0f, 0.0f, 1.0f); // Blue color for blue team players
+    // Draw red team (below)
+    drawPlayers(redTeam, 1.0f, 0.0f, 0.0f, NUM_PLAYERS_PER_TEAM, 0.0f, -0.2f); // Red color for red team players
 
-    // Draw red team
-    drawPlayers(redTeam, 1.0f, 0.0f, 0.0f); // Red color for red team players
+    // Draw blue team (above)
+    drawPlayers(blueTeam, 0.0f, 0.0f, 1.0f, NUM_PLAYERS_PER_TEAM, 0.0f, 0.2f); // Blue color for blue team players
 
     // Draw blue ball
     drawBall(blueBall.x, blueBall.y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for blue ball
@@ -76,7 +88,7 @@ void display() {
     glFlush();
 }
 
-void updateBallPosition(struct Ball* ball, struct Player* targetPlayer, float speed) {
+void updateBallPosition(struct Ball *ball, struct Player *targetPlayer, float speed) {
     if (ball->moving) {
         ball->x += ball->vx;
         ball->y += ball->vy;
@@ -93,7 +105,7 @@ void updateBallPosition(struct Ball* ball, struct Player* targetPlayer, float sp
     }
 }
 
-void passBall(struct Ball* ball, struct Player* targetPlayer, float speed) {
+void passBall(struct Ball *ball, struct Player *targetPlayer, float speed) {
     ball->moving = true;
     ball->vx = (targetPlayer->x - ball->x) * speed;
     ball->vy = (targetPlayer->y - ball->y) * speed;
@@ -101,12 +113,12 @@ void passBall(struct Ball* ball, struct Player* targetPlayer, float speed) {
 
 void keyboard(unsigned char key, int x, int y) {
     switch (key) {
-        case 'p': // 'p' key to pass the blue ball
-            passBall(&blueBall, &blueTeam[(blueActivePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
-            break;
-        case 'P': // 'P' key to pass the red ball
-            passBall(&redBall, &redTeam[(redActivePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
-            break;
+    case 'p': // 'p' key to pass the blue ball
+        passBall(&blueBall, &blueTeam[(blueActivePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
+        break;
+    case 'P': // 'P' key to pass the red ball
+        passBall(&redBall, &redTeam[(redActivePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
+        break;
     }
     glutPostRedisplay();
 }
@@ -119,29 +131,7 @@ void init() {
     glMatrixMode(GL_MODELVIEW);
 }
 
-int main(int argc, char** argv) {
-    // Initialize blue team and red team player positions
-    for (int i = 0; i < NUM_PLAYERS_PER_TEAM; ++i) {
-        blueTeam[i].x = cos(2 * PI * i / NUM_PLAYERS_PER_TEAM) * 0.5f;
-        blueTeam[i].y = sin(2 * PI * i / NUM_PLAYERS_PER_TEAM) * 0.5f - 0.5f;
-        redTeam[i].x = cos(2 * PI * i / NUM_PLAYERS_PER_TEAM) * 0.5f;
-        redTeam[i].y = sin(2 * PI * i / NUM_PLAYERS_PER_TEAM) * 0.5f + 0.5f;
-    }
-
-    // Initialize blue ball position
-    blueBall.x = blueTeam[0].x;
-    blueBall.y = blueTeam[0].y + 0.05f; // A little above the first blue player
-    blueBall.vx = 0.0f;
-    blueBall.vy = 0.0f;
-    blueBall.moving = false;
-
-    // Initialize red ball position
-    redBall.x = redTeam[0].x;
-    redBall.y = redTeam[0].y - 0.05f; // A little below the first red player
-    redBall.vx = 0.0f;
-    redBall.vy = 0.0f;
-    redBall.moving = false;
-
+int main(int argc, char **argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
     glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -150,6 +140,22 @@ int main(int argc, char** argv) {
     glutKeyboardFunc(keyboard);
     glutIdleFunc(display); // Update display continuously
     init();
+
+    // Initialize blue ball position
+    blueBall.x = 0.0f;
+    blueBall.y = blueTeam[0].y + 0.1f; // A little above the first blue player
+    blueBall.vx = 0.0f;
+    blueBall.vy = 0.0f;
+    blueBall.moving = false;
+
+    // Initialize red ball position
+    redBall.x = 0.0f;
+    redBall.y = redTeam[0].y - 0.1f; // A little below the first red player
+    redBall.vx = 0.0f;
+    redBall.vy = 0.0f;
+    redBall.moving = false;
+
     glutMainLoop();
     return 0;
 }
+
