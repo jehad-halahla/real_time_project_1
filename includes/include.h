@@ -7,7 +7,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <limits.h>
-#include <stdlib.h>
 #include <sys/wait.h>
 #include <signal.h>
 #include <time.h>
@@ -16,38 +15,31 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <stdbool.h>
-#include <semaphore.h>
 #include <sys/mman.h>
+#include <bits/types/sigset_t.h>
+#include "functions.c"
+
 #define PLAYERS_PER_TEAM 6
 
-// typedef struct player{
-//     unsigned int pid;
-//     unsigned int energy;
-//     unsigned int score;
-// } player;
+typedef struct player {
+     pid_t pid;
+     unsigned int energy;
+    
+} player;
 
 typedef struct team {
     unsigned int number_of_balls;
     unsigned int total_score; // incremented each round when balls are less than another team's balls.
-    unsigned int total_rounds_won;
+                            
 } team;
 
-
-#define _XOPEN_SOURCE_EXTENDED 1
-
 #endif
 
-#ifndef ROUND_DURATION
-#define ROUND_DURATION 10 // in seconds
-#endif
 
 #ifndef MAX_PLAYER_ENERGY
 #define MAX_PLAYER_ENERGY 40 // test value, might change later.
 #endif
 
-#ifndef MAX_NUMBER_OF_ROUNDS
-#define MAX_NUMBER_OF_ROUNDS 3
-#endif
 
 #ifndef MIN_PLAYER_ENERGY
 #define MIN_PLAYER_ENERGY 10 // test value, might change later.
@@ -58,8 +50,5 @@ typedef struct team {
 
 #define UISIG 7
 
-#define TEAM1_LEADER 5 // index of the team leader of team 1 in the pids array that is maintained by the parent.
-
-#define TEAM2_LEADER 11                                      //
-#define MAX_PAUSE_DURATION_MILLIS 1000
-#define MIN_PAUSE_DURATION_MILLIS 100
+#define TEAM1_LEADER 5
+#define TEAM2_LEADER 11
