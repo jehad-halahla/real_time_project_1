@@ -1,12 +1,11 @@
 #include <GL/glut.h>
 #include <math.h>
 #include <stdbool.h>
-#include <sys/time.h>
 
 const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 600;
 const float PI = 3.14159265359f;
-#define NUM_PLAYERS_PER_TEAM 12
+#define NUM_PLAYERS_PER_TEAM 6
 
 struct Ball {
     float x;
@@ -21,9 +20,7 @@ struct Player {
     float y;
 };
 
-void updateBallPosition(struct Ball *ball, struct Player *targetPlayer, float speed);
-void passBall(struct Ball *ball, struct Player *targetPlayer, float speed);
-long long getCurrentTime();
+void updateBallPosition(struct Ball* ball, struct Player* targetPlayer, float speed);
 
 struct Ball blueBall, redBall;
 struct Player blueTeam[NUM_PLAYERS_PER_TEAM], redTeam[NUM_PLAYERS_PER_TEAM];
@@ -47,17 +44,8 @@ void drawBall(float x, float y, float size, float r, float g, float b) {
     glTranslatef(-x, -y, 0.0f);
 }
 
-void drawPlayers(struct Player team[], float r, float g, float b, int numPlayers, float offsetX, float offsetY) {
-    float centerX = offsetX;
-    float centerY = offsetY;
-    float radius = 0.4f;
-
-    for (int i = 0; i < numPlayers; ++i) {
-        team[i].x = centerX + radius * cos(2 * PI * i / numPlayers);
-        team[i].y = centerY + radius * sin(2 * PI * i / numPlayers);
-    }
-
-    for (int i = 0; i < numPlayers; ++i) {
+void drawPlayers(struct Player team[], float r, float g, float b) {
+    for (int i = 0; i < NUM_PLAYERS_PER_TEAM; ++i) {
         if (i == 0) {
             if (r == 1.0f && g == 0.0f && b == 0.0f) // Red team
                 drawSquare(team[i].x, team[i].y, 0.05f, 0.0f, 1.0f, 0.0f); // Green color for first red player
@@ -70,49 +58,27 @@ void drawPlayers(struct Player team[], float r, float g, float b, int numPlayers
 }
 
 void display() {
-    static long long lastUpdateTime = 0;
+    glClear(GL_COLOR_BUFFER_BIT);
 
-    long long currentTime = getCurrentTime();
-    float elapsedTime = (currentTime - lastUpdateTime) / 1000.0f; // Convert to seconds
+    // Draw blue team
+    drawPlayers(blueTeam, 0.0f, 0.0f, 1.0f); // Blue color for blue team players
 
-    if (elapsedTime >= 0.016f) { // Update approximately every 16 milliseconds (about 60 FPS)
-        lastUpdateTime = currentTime;
+    // Draw red team
+    drawPlayers(redTeam, 1.0f, 0.0f, 0.0f); // Red color for red team players
 
-        glClear(GL_COLOR_BUFFER_BIT);
+    // Draw blue ball
+    drawBall(blueBall.x, blueBall.y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for blue ball
 
-        // Set viewport and projection matrix based on window dimensions
-        glViewport(0, 0, glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT));
-        glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
-        float aspect_ratio = (float)glutGet(GLUT_WINDOW_WIDTH) / (float)glutGet(GLUT_WINDOW_HEIGHT);
-        if (aspect_ratio >= 1.0f) {
-            glOrtho(-aspect_ratio, aspect_ratio, -1.0, 1.0, -1.0, 1.0);
-        } else {
-            glOrtho(-1.0, 1.0, -1.0 / aspect_ratio, 1.0 / aspect_ratio, -1.0, 1.0);
-        }
-        glMatrixMode(GL_MODELVIEW);
+    // Draw red ball
+    drawBall(redBall.x, redBall.y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for red ball
 
-        // Draw red team (below)
-        drawPlayers(redTeam, 1.0f, 0.0f, 0.0f, NUM_PLAYERS_PER_TEAM, 0.0f, -0.2f); // Red color for red team players
+    updateBallPosition(&blueBall, &blueTeam[(blueActivePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
+    updateBallPosition(&redBall, &redTeam[(redActivePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
 
-        // Draw blue team (above)
-        drawPlayers(blueTeam, 0.0f, 0.0f, 1.0f, NUM_PLAYERS_PER_TEAM, 0.0f, 0.2f); // Blue color for blue team players
-
-        // Draw blue ball
-        drawBall(blueBall.x, blueBall.y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for blue ball
-
-        // Draw red ball
-        drawBall(redBall.x, redBall.y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for red ball
-
-        updateBallPosition(&blueBall, &blueTeam[(blueActivePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
-        updateBallPosition(&redBall, &redTeam[(redActivePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
-
-        glFlush();
-    }
-    glutPostRedisplay();
+    glFlush();
 }
 
-void updateBallPosition(struct Ball *ball, struct Player *targetPlayer, float speed) {
+void updateBallPosition(struct Ball* ball, struct Player* targetPlayer, float speed) {
     if (ball->moving) {
         ball->x += ball->vx;
         ball->y += ball->vy;
@@ -129,7 +95,7 @@ void updateBallPosition(struct Ball *ball, struct Player *targetPlayer, float sp
     }
 }
 
-void passBall(struct Ball *ball, struct Player *targetPlayer, float speed) {
+void passBall(struct Ball* ball, struct Player* targetPlayer, float speed) {
     ball->moving = true;
     ball->vx = (targetPlayer->x - ball->x) * speed;
     ball->vy = (targetPlayer->y - ball->y) * speed;
@@ -137,13 +103,14 @@ void passBall(struct Ball *ball, struct Player *targetPlayer, float speed) {
 
 void keyboard(unsigned char key, int x, int y) {
     switch (key) {
-    case 'p': // 'p' key to pass the blue ball
-        passBall(&blueBall, &blueTeam[(blueActivePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
-        break;
-    case 'P': // 'P' key to pass the red ball
-        passBall(&redBall, &redTeam[(redActivePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
-        break;
+        case 'p': // 'p' key to pass the blue ball
+            passBall(&blueBall, &blueTeam[(blueActivePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
+            break;
+        case 'P': // 'P' key to pass the red ball
+            passBall(&redBall, &redTeam[(redActivePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
+            break;
     }
+    glutPostRedisplay();
 }
 
 void init() {
@@ -154,14 +121,28 @@ void init() {
     glMatrixMode(GL_MODELVIEW);
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     // Initialize blue team and red team player positions
     for (int i = 0; i < NUM_PLAYERS_PER_TEAM; ++i) {
-        blueTeam[i].x = 0.0f;
-        blueTeam[i].y = 0.0f;
-        redTeam[i].x = 0.0f;
-        redTeam[i].y = 0.0f;
+        blueTeam[i].x = cos(2 * PI * i / NUM_PLAYERS_PER_TEAM) * 0.5f;
+        blueTeam[i].y = sin(2 * PI * i / NUM_PLAYERS_PER_TEAM) * 0.5f - 0.5f;
+        redTeam[i].x = cos(2 * PI * i / NUM_PLAYERS_PER_TEAM) * 0.5f;
+        redTeam[i].y = sin(2 * PI * i / NUM_PLAYERS_PER_TEAM) * 0.5f + 0.5f;
     }
+
+    // Initialize blue ball position
+    blueBall.x = blueTeam[0].x;
+    blueBall.y = blueTeam[0].y + 0.05f; // A little above the first blue player
+    blueBall.vx = 0.0f;
+    blueBall.vy = 0.0f;
+    blueBall.moving = false;
+
+    // Initialize red ball position
+    redBall.x = redTeam[0].x;
+    redBall.y = redTeam[0].y - 0.05f; // A little below the first red player
+    redBall.vx = 0.0f;
+    redBall.vy = 0.0f;
+    redBall.moving = false;
 
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
@@ -171,28 +152,8 @@ int main(int argc, char **argv) {
     glutKeyboardFunc(keyboard);
     glutIdleFunc(display); // Update display continuously
     init();
-
-    // Initialize blue ball position
-    blueBall.x = blueTeam[0].x;
-    blueBall.y = blueTeam[0].y + 0.1f; // A little above the first blue player
-    blueBall.vx = 0.0f;
-    blueBall.vy = 0.0f;
-    blueBall.moving = false;
-
-    // Initialize red ball position
-    redBall.x = redTeam[0].x;
-    redBall.y = redTeam[0].y - 0.1f; // A little below the first red player
-    redBall.vx = 0.0f;
-    redBall.vy = 0.0f;
-    redBall.moving = false;
-
     glutMainLoop();
     return 0;
 }
 
-long long getCurrentTime() {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000;
-}
 
