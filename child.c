@@ -27,7 +27,7 @@ struct sigaction sa_usr1, sa_usr2, sa_chld, sa_io, ignore_action, empty_action;
 
 int sigchild_number = 0;
 
-bool next_round_started = false;
+//bool next_round_started = true;
 
 void signal_handler_usr1(int signum) {
 
@@ -77,6 +77,7 @@ void signal_handler_usr2 (int signum) {
         if(player_number == 11){
             sleep(1);
             printf("sending ball %d(%d) -> %d(%d)\n",getpid(),player_number , pid_of_team1_leader, 5);
+            fflush(stdout);
 
             kill(getppid(), SIGUSR1); // send a signal to the parent process to change count of balls
 
@@ -86,6 +87,7 @@ void signal_handler_usr2 (int signum) {
         else { //team 1 leader
             sleep(1);
             printf("sending ball %d(%d) -> %d(%d)\n",getpid(),player_number , pid_of_team2_leader, 11);
+            fflush(stdout);
 
             kill(getppid(), SIGUSR2); // send a signal to the parent process to change count of balls
                                       //
@@ -103,28 +105,19 @@ void signal_handler_sigchild(int signum) {
 
     if (signum == SIGCHLD) {
 
-        if (next_round_started) {
+        sigset_t signal_set;
+        int sig;
 
-            sigignore(SIGUSR1);
-            sigignore(SIGUSR2);
+        // Create a signal set containing SIGUSR1 and SIGUSR2
+        sigemptyset(&signal_set);
+        sigaddset(&signal_set, SIGUSR1);
+        sigaddset(&signal_set, SIGUSR2);
 
-            ignore_usr1_usr2 = true;
+        // Block SIGUSR1 and SIGUSR2
+        sigprocmask(SIG_BLOCK, &signal_set, NULL);
 
-            //while (!next_round_started) {
-              //  pause();
-           // }
-        }
-
-        else {
-
-            sigaction(SIGUSR1, &sa_usr1, NULL);
-            sigaction(SIGUSR2, &sa_usr2, NULL);
-
-            ignore_usr1_usr2 = false;
-
-        }
-
-        next_round_started = !next_round_started;
+        // wait for SIGUSR1 or SIGUSR2
+        sigwait(&signal_set, &sig);
     }
 
     fflush(stdout);
@@ -204,11 +197,6 @@ int main(int argc, char* argv[]) {
     }
     */
 
-    empty_action.sa_handler = dummy_handler;
-    sigemptyset(&empty_action.sa_mask);
-    empty_action.sa_flags = 0;
-
-
     // normalizing variables for each player
     this_team_leader_pid = (player_number <= 5) ? pid_of_team1_leader : pid_of_team2_leader;
     other_team_leader_pid = (player_number <= 5) ? pid_of_team2_leader : pid_of_team1_leader;
@@ -274,42 +262,3 @@ double short_pause_duration() {
     return 50000*((double)A / pow((double)(energy + random_constant), (double)K));
 }
 
-void send_ball_to_next_player() {
-    
-
-    if (player_number < 5) {
-
-        printf("Sending: %d(%d) -> %d(%d)\n",getpid(), player_number,next_player_pid ,next_player_number);
-        kill(next_player_pid, SIGUSR2);
-
-    }
-    
-    else  if (player_number == 5) {
-
-        printf("Sending: %d(%d) -> %d(%d)\n",getpid(), player_number,other_team_leader_pid ,next_player_number);
-        kill(other_team_leader_pid, SIGUSR1);
-    
-    }
-   
-
-    if (player_number == 10) {
-        
-        printf("Sending: %d(%d) -> %d(%d)\n",getpid(), player_number,other_team_leader_pid ,next_player_number);
-        kill(pid_of_team1_leader, SIGUSR1);
-    }
-
-    else if (player_number > 5 && player_number < 11) {
-
-        printf("Sending: %d(%d) -> %d(%d)\n",getpid(), player_number,next_player_pid ,next_player_number);
-        kill(next_player_pid, SIGUSR2);
-    
-    }
-
-
-}
-
-
-void dummy_handler(int signum) {
-    // do nothing
-    return;
-}

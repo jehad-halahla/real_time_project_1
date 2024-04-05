@@ -25,7 +25,6 @@ void init_teams();
 
 int current_round_number = 0;
 
-bool time_up = false;
 
 struct sigaction sa_chld, sa_io, sa_alarm, sa_usr1, sa_usr2;;
 
@@ -71,7 +70,6 @@ void doOneRound();
 
 void alarm_handler(int signum) {
 
-    time_up = true;
     
     if (team1.number_of_balls < team2.number_of_balls) {
         team1.total_score++;
@@ -91,6 +89,13 @@ void alarm_handler(int signum) {
         kill(process_pid[i], SIGCHLD);
     }
 
+    // delay for 1 second
+    //sleep(1);
+
+    // send SIGUSR1 to all children to unblock them
+    for (int i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
+        kill(process_pid[i], SIGUSR1);
+    }
 
     if (current_round_number < MAX_NUMBER_OF_ROUNDS) {
         doOneRound();
@@ -116,7 +121,7 @@ void alarm_handler(int signum) {
         
         for (int i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
             kill(process_pid[i], SIGKILL);
-            usleep(1000);
+         //   usleep(1000);
         }
 
         exit(0);
@@ -277,11 +282,26 @@ void create_FIFOs()
 
 void doOneRound() {
 
+
+    // Mask all signals
+    sigset_t mask;
+    sigfillset(&mask);
+    sigprocmask(SIG_BLOCK, &mask, NULL);
+
+    // Start new round
+    printf("Starting new round...\n");
+
+    // Clear signal queue
+    sigset_t empty_mask;
+    sigemptyset(&empty_mask);
+    sigprocmask(SIG_SETMASK, &empty_mask, NULL);
+
+    /* 
     for (int i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
         kill(process_pid[i], SIGCHLD);
-        usleep(1000);
+     //   usleep(1500);
     }
-    
+    */
 
     team1.number_of_balls = 0;
     team2.number_of_balls = 0;
@@ -290,26 +310,12 @@ void doOneRound() {
     alarm(ROUND_DURATION); // set the alarm for the round duration.
 
     // send a ball to team1 leader (send a signal to the team1 leader)
-    team1.number_of_balls+=4;
+    team1.number_of_balls++;
     kill(process_pid[5], SIGUSR1);
-    usleep(1000);
-    kill(process_pid[5], SIGUSR1);
-    usleep(1000);
-    kill(process_pid[5], SIGUSR1);
-    usleep(1000);
-    kill(process_pid[5], SIGUSR1);
-    usleep(1000);
 
     // send a ball to team2 leader (send a signal to the team2 leader)
-    team2.number_of_balls+=4;
+    team2.number_of_balls++;
     kill(process_pid[11], SIGUSR1);
-    usleep(1000);
-    kill(process_pid[11], SIGUSR1);
-    usleep(1000);
-    kill(process_pid[11], SIGUSR1);
-    usleep(1000);
-    kill(process_pid[11], SIGUSR1);
-    usleep(1000);
 
 }
 
