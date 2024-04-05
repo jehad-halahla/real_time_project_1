@@ -7,7 +7,6 @@ const int WINDOW_HEIGHT = 600;
 const float PI = 3.14159265359f;
 #define NUM_PLAYERS_PER_TEAM 6
 
-
 struct Ball {
     float x;
     float y;
