@@ -1,5 +1,6 @@
 #include "includes/include.h"
 #include <bits/types/sigset_t.h>
+#include <semaphore.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -27,7 +28,18 @@ struct sigaction sa_usr1, sa_usr2, sa_chld, sa_io, ignore_action, empty_action;
 
 int sigchild_number = 0;
 
-bool next_round_started = false;
+//bool next_round_started = true;
+
+
+int fd_shm;
+// Define a structure to hold the flag
+struct shared_data {
+    int ignore_signals; // 0 means not ignore, 1 means ignore
+};
+
+struct shared_data *shared_mem;
+
+void open_shared_mem();
 
 void signal_handler_usr1(int signum) {
 
@@ -36,7 +48,7 @@ void signal_handler_usr1(int signum) {
     // next team a team leader receives the ball, it receives the signal on SIGUSR2 and sends the ball to the other team leader
     if (signum == SIGUSR1) {
 
-        if (ignore_usr1_usr2) {
+        if (shared_mem->ignore_signals == 1) {
             return;
         }
 
@@ -69,7 +81,7 @@ void signal_handler_usr2 (int signum) {
 
     if (signum == SIGUSR2) {
 
-        if (ignore_usr1_usr2) {
+        if (shared_mem->ignore_signals == 1) {
             return;
         }
 
@@ -77,6 +89,7 @@ void signal_handler_usr2 (int signum) {
         if(player_number == 11){
             sleep(1);
             printf("sending ball %d(%d) -> %d(%d)\n",getpid(),player_number , pid_of_team1_leader, 5);
+            fflush(stdout);
 
             kill(getppid(), SIGUSR1); // send a signal to the parent process to change count of balls
 
@@ -86,13 +99,13 @@ void signal_handler_usr2 (int signum) {
         else { //team 1 leader
             sleep(1);
             printf("sending ball %d(%d) -> %d(%d)\n",getpid(),player_number , pid_of_team2_leader, 11);
+            fflush(stdout);
 
             kill(getppid(), SIGUSR2); // send a signal to the parent process to change count of balls
                                       //
             kill(pid_of_team2_leader, SIGUSR1);
 
         }
-        // kill(pid_of_team1_leader, SIGQUIT);
     }
 
     fflush(stdout);
@@ -103,28 +116,22 @@ void signal_handler_sigchild(int signum) {
 
     if (signum == SIGCHLD) {
 
-        if (next_round_started) {
+        sigset_t signal_set;
+        int sig;
 
-            sigignore(SIGUSR1);
-            sigignore(SIGUSR2);
+        // Create a signal set containing SIGUSR1 and SIGUSR2
+        sigemptyset(&signal_set);
+        sigaddset(&signal_set, SIGUSR1);
+        sigaddset(&signal_set, SIGUSR2);
+        sigaddset(&signal_set, SIGCHLD); // the signal that should unblock the process.
 
-            ignore_usr1_usr2 = true;
+        // Block SIGUSR1 and SIGUSR2
+        sigprocmask(SIG_BLOCK, &signal_set, NULL);
 
-            //while (!next_round_started) {
-              //  pause();
-           // }
-        }
+        // wait for a SIGCHILD signal only
 
-        else {
-
-            sigaction(SIGUSR1, &sa_usr1, NULL);
-            sigaction(SIGUSR2, &sa_usr2, NULL);
-
-            ignore_usr1_usr2 = false;
-
-        }
-
-        next_round_started = !next_round_started;
+        // wait for SIGUSR1 or SIGUSR2
+        sigwait(&signal_set, &sig);
     }
 
     fflush(stdout);
@@ -135,6 +142,8 @@ void dummy_handler(int signum);
 
 
 int main(int argc, char* argv[]) {
+    
+    open_shared_mem();
 
     // Set the handler to ignore
     ignore_action.sa_handler = SIG_IGN;
@@ -193,21 +202,6 @@ int main(int argc, char* argv[]) {
         perror("sigaction for SIGCHLD");
         exit(EXIT_FAILURE);
     }
-
-    /* Set up SIGIO handler
-    sa_io.sa_handler = signal_handler;
-    sigemptyset(&sa_io.sa_mask);
-    sa_io.sa_flags = 0;
-    if (sigaction(SIGIO, &sa_io, NULL) == -1) {
-        perror("sigaction for SIGIO");
-        exit(EXIT_FAILURE);
-    }
-    */
-
-    empty_action.sa_handler = dummy_handler;
-    sigemptyset(&empty_action.sa_mask);
-    empty_action.sa_flags = 0;
-
 
     // normalizing variables for each player
     this_team_leader_pid = (player_number <= 5) ? pid_of_team1_leader : pid_of_team2_leader;
@@ -274,42 +268,21 @@ double short_pause_duration() {
     return 50000*((double)A / pow((double)(energy + random_constant), (double)K));
 }
 
-void send_ball_to_next_player() {
-    
 
-    if (player_number < 5) {
+void open_shared_mem() {
 
-        printf("Sending: %d(%d) -> %d(%d)\n",getpid(), player_number,next_player_pid ,next_player_number);
-        kill(next_player_pid, SIGUSR2);
-
+    // Open the shared memory segment
+    fd_shm = shm_open("/my_shared_memory", O_RDONLY, 0666);
+    if (fd_shm == -1) {
+        perror("shm_open");
+        exit(EXIT_FAILURE);
     }
-    
-    else  if (player_number == 5) {
-
-        printf("Sending: %d(%d) -> %d(%d)\n",getpid(), player_number,other_team_leader_pid ,next_player_number);
-        kill(other_team_leader_pid, SIGUSR1);
-    
-    }
-   
-
-    if (player_number == 10) {
-        
-        printf("Sending: %d(%d) -> %d(%d)\n",getpid(), player_number,other_team_leader_pid ,next_player_number);
-        kill(pid_of_team1_leader, SIGUSR1);
+    // Map the shared memory segment into the address space
+    shared_mem = mmap(NULL, sizeof(struct shared_data), PROT_READ, MAP_SHARED, fd_shm, 0);
+    if (shared_mem == MAP_FAILED) {
+        perror("mmap");
+        exit(EXIT_FAILURE);
     }
 
-    else if (player_number > 5 && player_number < 11) {
-
-        printf("Sending: %d(%d) -> %d(%d)\n",getpid(), player_number,next_player_pid ,next_player_number);
-        kill(next_player_pid, SIGUSR2);
-    
-    }
-
-
-}
-
-
-void dummy_handler(int signum) {
-    // do nothing
-    return;
+    close(fd_shm);
 }

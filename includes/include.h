@@ -16,7 +16,8 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <stdbool.h>
-
+#include <semaphore.h>
+#include <sys/mman.h>
 #define PLAYERS_PER_TEAM 6
 
 // typedef struct player{
