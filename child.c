@@ -1,9 +1,4 @@
 #include "includes/include.h"
-#include <bits/types/sigset_t.h>
-#include <semaphore.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <unistd.h>
 
 // include sigignore()
 #include <signal.h>
@@ -40,6 +35,7 @@ struct shared_data {
 struct shared_data *shared_mem;
 
 void open_shared_mem();
+void send_ball(int next_player_pid, int signum, int next_player_number); 
 
 void signal_handler_usr1(int signum) {
 
@@ -54,20 +50,11 @@ void signal_handler_usr1(int signum) {
 
         if (player_number != 10 && player_number != 4) { //all players except player 10 and 4 
 
-            printf("sending ball %d(%d) -> %d(%d)\n",getpid(),player_number , next_player_pid, next_player_number);
-            fflush(stdout);
-            sleep(1);
-            kill(next_player_pid, SIGUSR1);
-
+            send_ball(next_player_pid, SIGUSR1, next_player_number);
         }
 
         else {
-            //for players 10 and 4 to send back to team leads
-            printf("sending ball %d(%d) -> %d(%d) --> using signal SIGUSR2\n",getpid(),player_number , next_player_pid, next_player_number);
-            fflush(stdout);
-            sleep(1);
-
-            kill(next_player_pid, SIGUSR2); //here 11 recieves the ball from 10 and sends it to 5 , 4 recieves the ball from 5 and sends it to 11
+            send_ball(next_player_pid, SIGUSR2, next_player_number);
         }
 
     }
@@ -87,24 +74,15 @@ void signal_handler_usr2 (int signum) {
 
         // only players 11 ,5  receive this signal (for now, testing purposes)
         if(player_number == 11){
-            sleep(1);
-            printf("sending ball %d(%d) -> %d(%d)\n",getpid(),player_number , pid_of_team1_leader, 5);
-            fflush(stdout);
 
+            send_ball(pid_of_team1_leader, SIGUSR1, TEAM1_LEADER);
             kill(getppid(), SIGUSR1); // send a signal to the parent process to change count of balls
-
-            kill(pid_of_team1_leader, SIGUSR1);
         }
 
         else { //team 1 leader
-            sleep(1);
-            printf("sending ball %d(%d) -> %d(%d)\n",getpid(),player_number , pid_of_team2_leader, 11);
-            fflush(stdout);
 
+            send_ball(pid_of_team2_leader, SIGUSR1, TEAM2_LEADER);
             kill(getppid(), SIGUSR2); // send a signal to the parent process to change count of balls
-                                      //
-            kill(pid_of_team2_leader, SIGUSR1);
-
         }
     }
 
@@ -119,7 +97,7 @@ void signal_handler_sigchild(int signum) {
         sigset_t signal_set;
         int sig;
 
-        // Create a signal set containing SIGUSR1 and SIGUSR2
+        // Create a sinnal set containing SIGUSR1 and SIGUSR2
         sigemptyset(&signal_set);
         sigaddset(&signal_set, SIGUSR1);
         sigaddset(&signal_set, SIGUSR2);
@@ -209,7 +187,7 @@ int main(int argc, char* argv[]) {
 
     if (player_number == 5) {
 
-        sleep(1);
+        my_pause(1);
         int fd = open(FIFO2, O_RDONLY);
         if (fd == -1) {
             perror("Error opening FIFO2");
@@ -224,7 +202,6 @@ int main(int argc, char* argv[]) {
 
         close(fd);
         
-        printf("%d is the pid of next player from process 5\n", next_player_pid);
 
     }
 
@@ -249,8 +226,6 @@ int main(int argc, char* argv[]) {
 
         close(fd);
 
-         printf("%d is the pid of team1 leader from process 11\n", pid_of_team1_leader);
-         printf("%d is the pid of next player from process 11\n", next_player_pid);
     }
 
     while (1) {
@@ -264,7 +239,7 @@ int main(int argc, char* argv[]) {
 
 double short_pause_duration() {
     //returns a short pause duration in milliseconds
-    int random_constant = 10 + rand() % 11; // number between 10 and 20
+    int random_constant = 15 + rand() % 11; // number between 10 and 20
     return 50000*((double)A / pow((double)(energy + random_constant), (double)K));
 }
 
@@ -286,3 +261,12 @@ void open_shared_mem() {
 
     close(fd_shm);
 }
+
+
+void send_ball(int next_player_pid, int signum, int next_player_number) {
+    my_pause(1); // Assuming my_pause is already defined elsewhere
+    printf("sending ball %d(%d) -> %d(%d)\n", getpid(), player_number, next_player_pid, next_player_number);
+    fflush(stdout);
+    kill(next_player_pid, signum);
+}
+

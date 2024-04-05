@@ -1,9 +1,4 @@
 #include "includes/include.h"
-#include <stdio.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <linux/stat.h>
-#include <fcntl.h>
 
 pid_t process_pid[2*PLAYERS_PER_TEAM]; 
 unsigned player_energy[2*PLAYERS_PER_TEAM]; 
@@ -23,8 +18,13 @@ void assign_initial_energy();
 void fork_children();
 void init_teams();
 
+unsigned int round_duration;
+unsigned int number_of_rounds;
+
 int current_round_number = 0;
 
+
+void read_parameters(int argc,char* argv[]);
 
 struct sigaction sa_chld, sa_io, sa_alarm, sa_usr1, sa_usr2;;
 
@@ -67,9 +67,7 @@ void signal_handler(int signum) {
     if (signum == SIGIO) {
 
         printf("entrered SIGIO from parent\n");
-
     }
-
 
     fflush(stdout);
 }
@@ -80,6 +78,8 @@ void doOneRound();
 void alarm_handler(int signum) {
 
     
+    shared_mem->ignore_signals = 1;
+
     if (team1.number_of_balls < team2.number_of_balls) {
         team1.total_score++;
 
@@ -89,16 +89,16 @@ void alarm_handler(int signum) {
         team2.total_score++;
     }
 
+
+    my_pause(2);
+
     printf("Team 1 score: %d, and bumber of balls: %d\n", team1.total_score, team1.number_of_balls);
     printf("Team 2 score: %d, and bumber of balls: %d\n", team2.total_score, team2.number_of_balls);
-
-
-    shared_mem->ignore_signals = 1;
     printf("Round %d finished\n", current_round_number);
-    usleep(4 * 1000000);
 
+    my_pause(2);
 
-    if (current_round_number < MAX_NUMBER_OF_ROUNDS) {
+    if (current_round_number < number_of_rounds) {
         doOneRound();
     }
 
@@ -131,7 +131,10 @@ void alarm_handler(int signum) {
 
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+
+
+    read_parameters(argc, argv);
 
     create_shared_mem();
 
@@ -257,8 +260,6 @@ void init_teams() {
     team1.total_score = 0;
     team2.number_of_balls = 0;
     team2.total_score = 0;
-    team1.total_rounds_won = 0;
-    team2.total_rounds_won = 0;
 }
 
 void create_FIFOs()
@@ -296,7 +297,7 @@ void doOneRound() {
     team2.number_of_balls = 0;
 
     current_round_number++;
-    alarm(ROUND_DURATION); // set the alarm for the round duration.
+    alarm(round_duration); // set the alarm for the round duration.
 
     // send a ball to team1 leader (send a signal to the team1 leader)
     team1.number_of_balls++;
@@ -409,5 +410,29 @@ void create_shared_mem() {
     }
 
     close(fd_shm);
+
+}
+
+
+void read_parameters(int argc,char* argv[]) {
+
+    FILE *file;
+    char line[100]; // Assuming the line won't exceed 100 characters
+
+    // Open the file for reading
+    file = fopen("settings.txt", "r");
+    if (file == NULL) {
+        printf("Error opening file.\n");
+        return ;
+    }
+
+    // Read the line from the file
+    fgets(line, sizeof(line), file);
+
+    // Close the file
+    fclose(file);
+
+    // Use sscanf to extract the numbers
+    sscanf(line, "round_duration=%d, number_of_rounds=%d", &round_duration, &number_of_rounds);
 
 }
