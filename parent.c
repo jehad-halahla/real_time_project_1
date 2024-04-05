@@ -28,6 +28,15 @@ int current_round_number = 0;
 
 struct sigaction sa_chld, sa_io, sa_alarm, sa_usr1, sa_usr2;;
 
+int fd_shm;
+// Define a structure to hold the flag
+struct shared_data {
+    int ignore_signals; // 0 means not ignore, 1 means ignore
+};
+
+struct shared_data *shared_mem;
+
+void create_shared_mem(); 
 
 void signal_handler(int signum) {
 
@@ -83,19 +92,11 @@ void alarm_handler(int signum) {
     printf("Team 1 score: %d, and bumber of balls: %d\n", team1.total_score, team1.number_of_balls);
     printf("Team 2 score: %d, and bumber of balls: %d\n", team2.total_score, team2.number_of_balls);
 
-    // let all children ignore SIGUSR1 and SIGUSR2 signals
 
-    for (int i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
-        kill(process_pid[i], SIGCHLD);
-    }
+    shared_mem->ignore_signals = 1;
+    printf("Round %d finished\n", current_round_number);
+    usleep(4 * 1000000);
 
-    // delay for 1 second
-    //sleep(1);
-
-    // send SIGUSR1 to all children to unblock them
-    for (int i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
-        kill(process_pid[i], SIGUSR1);
-    }
 
     if (current_round_number < MAX_NUMBER_OF_ROUNDS) {
         doOneRound();
@@ -131,6 +132,8 @@ void alarm_handler(int signum) {
 }
 
 int main() {
+
+    create_shared_mem();
 
     //create the FIFOs
     create_FIFOs();
@@ -231,7 +234,9 @@ int main() {
         waitpid(process_pid[i], &status, 0);
     }
     
-    
+    munmap(shared_mem, sizeof(struct shared_data));
+    close(fd_shm);
+
     return 0;
 }
 
@@ -281,27 +286,11 @@ void create_FIFOs()
 
 
 void doOneRound() {
-
-
-    // Mask all signals
-    sigset_t mask;
-    sigfillset(&mask);
-    sigprocmask(SIG_BLOCK, &mask, NULL);
+    
+    shared_mem->ignore_signals = 0;
 
     // Start new round
     printf("Starting new round...\n");
-
-    // Clear signal queue
-    sigset_t empty_mask;
-    sigemptyset(&empty_mask);
-    sigprocmask(SIG_SETMASK, &empty_mask, NULL);
-
-    /* 
-    for (int i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
-        kill(process_pid[i], SIGCHLD);
-     //   usleep(1500);
-    }
-    */
 
     team1.number_of_balls = 0;
     team2.number_of_balls = 0;
@@ -394,4 +383,31 @@ void fork_children(){
             process_pid[i] = current_pid;  
         }
     }    
+}
+
+
+void create_shared_mem() {
+
+    // Create a shared memory segment
+    fd_shm = shm_open("/my_shared_memory", O_CREAT | O_RDWR, 0666);
+    if (fd_shm == -1) {
+        perror("shm_open");
+        exit(EXIT_FAILURE);
+    }
+
+    // Set the size of the shared memory segment
+    if (ftruncate(fd_shm, sizeof(struct shared_data)) == -1) {
+        perror("ftruncate");
+        exit(EXIT_FAILURE);
+    }
+
+    // Map the shared memory segment into the address space
+    shared_mem = mmap(NULL, sizeof(struct shared_data), PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
+    if (shared_mem == MAP_FAILED) {
+        perror("mmap");
+        exit(EXIT_FAILURE);
+    }
+
+    close(fd_shm);
+
 }

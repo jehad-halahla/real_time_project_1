@@ -1,5 +1,6 @@
 #include "includes/include.h"
 #include <bits/types/sigset_t.h>
+#include <semaphore.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -29,6 +30,17 @@ int sigchild_number = 0;
 
 //bool next_round_started = true;
 
+
+int fd_shm;
+// Define a structure to hold the flag
+struct shared_data {
+    int ignore_signals; // 0 means not ignore, 1 means ignore
+};
+
+struct shared_data *shared_mem;
+
+void open_shared_mem();
+
 void signal_handler_usr1(int signum) {
 
 
@@ -36,7 +48,7 @@ void signal_handler_usr1(int signum) {
     // next team a team leader receives the ball, it receives the signal on SIGUSR2 and sends the ball to the other team leader
     if (signum == SIGUSR1) {
 
-        if (ignore_usr1_usr2) {
+        if (shared_mem->ignore_signals == 1) {
             return;
         }
 
@@ -69,7 +81,7 @@ void signal_handler_usr2 (int signum) {
 
     if (signum == SIGUSR2) {
 
-        if (ignore_usr1_usr2) {
+        if (shared_mem->ignore_signals == 1) {
             return;
         }
 
@@ -94,7 +106,6 @@ void signal_handler_usr2 (int signum) {
             kill(pid_of_team2_leader, SIGUSR1);
 
         }
-        // kill(pid_of_team1_leader, SIGQUIT);
     }
 
     fflush(stdout);
@@ -112,9 +123,12 @@ void signal_handler_sigchild(int signum) {
         sigemptyset(&signal_set);
         sigaddset(&signal_set, SIGUSR1);
         sigaddset(&signal_set, SIGUSR2);
+        sigaddset(&signal_set, SIGCHLD); // the signal that should unblock the process.
 
         // Block SIGUSR1 and SIGUSR2
         sigprocmask(SIG_BLOCK, &signal_set, NULL);
+
+        // wait for a SIGCHILD signal only
 
         // wait for SIGUSR1 or SIGUSR2
         sigwait(&signal_set, &sig);
@@ -128,6 +142,8 @@ void dummy_handler(int signum);
 
 
 int main(int argc, char* argv[]) {
+    
+    open_shared_mem();
 
     // Set the handler to ignore
     ignore_action.sa_handler = SIG_IGN;
@@ -186,16 +202,6 @@ int main(int argc, char* argv[]) {
         perror("sigaction for SIGCHLD");
         exit(EXIT_FAILURE);
     }
-
-    /* Set up SIGIO handler
-    sa_io.sa_handler = signal_handler;
-    sigemptyset(&sa_io.sa_mask);
-    sa_io.sa_flags = 0;
-    if (sigaction(SIGIO, &sa_io, NULL) == -1) {
-        perror("sigaction for SIGIO");
-        exit(EXIT_FAILURE);
-    }
-    */
 
     // normalizing variables for each player
     this_team_leader_pid = (player_number <= 5) ? pid_of_team1_leader : pid_of_team2_leader;
@@ -262,3 +268,21 @@ double short_pause_duration() {
     return 50000*((double)A / pow((double)(energy + random_constant), (double)K));
 }
 
+
+void open_shared_mem() {
+
+    // Open the shared memory segment
+    fd_shm = shm_open("/my_shared_memory", O_RDONLY, 0666);
+    if (fd_shm == -1) {
+        perror("shm_open");
+        exit(EXIT_FAILURE);
+    }
+    // Map the shared memory segment into the address space
+    shared_mem = mmap(NULL, sizeof(struct shared_data), PROT_READ, MAP_SHARED, fd_shm, 0);
+    if (shared_mem == MAP_FAILED) {
+        perror("mmap");
+        exit(EXIT_FAILURE);
+    }
+
+    close(fd_shm);
+}
