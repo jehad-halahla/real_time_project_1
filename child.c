@@ -187,7 +187,6 @@ int main(int argc, char* argv[]) {
 
     if (player_number == 5) {
 
-        my_pause(1);
         int fd = open(FIFO2, O_RDONLY);
         if (fd == -1) {
             perror("Error opening FIFO2");
@@ -239,8 +238,8 @@ int main(int argc, char* argv[]) {
 
 double short_pause_duration() {
     //returns a short pause duration in milliseconds
-    int random_constant = 15 + rand() % 11; // number between 10 and 20
-    return 50000*((double)A / pow((double)(energy + random_constant), (double)K));
+    int random_constant = 17 + rand() % 4; // number between 17 and 20
+    return 7000*((double)A / pow((double)(energy + random_constant), (double)K));
 }
 
 
@@ -264,7 +263,7 @@ void open_shared_mem() {
 
 
 void send_ball(int next_player_pid, int signum, int next_player_number) {
-    my_pause(1); // Assuming my_pause is already defined elsewhere
+    my_pause(short_pause_duration()); // Assuming my_pause is already defined elsewhere
     printf("sending ball %d(%d) -> %d(%d)\n", getpid(), player_number, next_player_pid, next_player_number);
     fflush(stdout);
     kill(next_player_pid, signum);

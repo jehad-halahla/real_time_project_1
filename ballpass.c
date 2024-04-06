@@ -1,6 +1,10 @@
+#include "includes/include.h"
 #include <GL/glut.h>
-#include <math.h>
-#include <stdbool.h>
+#include <GL/gl.h>
+
+
+struct sigaction sa_usr1, sa_usr2;
+
 
 const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 600;
@@ -20,9 +24,13 @@ struct Player {
     float y;
 };
 
-void updateBallPosition(struct Ball* ball, struct Player* targetPlayer, float speed);
 
+struct Ball balls[MAX_NUM_BALLS];
+
+void updateBallPosition(struct Ball* ball, struct Player* targetPlayer, float speed);
+void new_round(int argc, char** argv);
 struct Ball blueBall, redBall;
+
 struct Player blueTeam[NUM_PLAYERS_PER_TEAM], redTeam[NUM_PLAYERS_PER_TEAM];
 int blueActivePlayer = 0; // Index of the player currently in possession of the blue ball
 int redActivePlayer = 0;  // Index of the player currently in possession of the red ball
@@ -59,22 +67,14 @@ void drawPlayers(struct Player team[], float r, float g, float b) {
 
 void display() {
     glClear(GL_COLOR_BUFFER_BIT);
-
     // Draw blue team
     drawPlayers(blueTeam, 0.0f, 0.0f, 1.0f); // Blue color for blue team players
 
     // Draw red team
     drawPlayers(redTeam, 1.0f, 0.0f, 0.0f); // Red color for red team players
 
-    // Draw blue ball
-    drawBall(blueBall.x, blueBall.y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for blue ball
-
-    // Draw red ball
-    drawBall(redBall.x, redBall.y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for red ball
-
-    updateBallPosition(&blueBall, &blueTeam[(blueActivePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
-    updateBallPosition(&redBall, &redTeam[(redActivePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
-
+    updateBallPosition(&balls[0], &blueTeam[0], SPEED);
+    drawBall((balls[0].x) , balls[0].y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for balls
     glFlush();
 }
 
@@ -86,7 +86,7 @@ void updateBallPosition(struct Ball* ball, struct Player* targetPlayer, float sp
         // Check if ball reached the destination
         if (fabs(ball->x - targetPlayer->x) < 0.01 && fabs(ball->y - targetPlayer->y) < 0.01) {
             ball->moving = false;
-            if (ball == &blueBall) {
+            if (ball == &blueBall){
                 blueActivePlayer = (blueActivePlayer + 1) % NUM_PLAYERS_PER_TEAM; // Update active player for blue team
             } else {
                 redActivePlayer = (redActivePlayer + 1) % NUM_PLAYERS_PER_TEAM; // Update active player for red team
@@ -113,6 +113,21 @@ void keyboard(unsigned char key, int x, int y) {
     glutPostRedisplay();
 }
 
+void signal_handler(int signum){
+    if(signum == SIGUSR1){
+
+        printf("SIGUSR1 received\n");   
+        passBall(&balls[0], &blueTeam[0], SPEED);
+    }
+    else if(signum == SIGUSR2){
+        printf("SIGUSR2 received\n");
+        passBall(&balls[0], &redTeam[0], SPEED);
+    }
+    else if(signum == UISIG){
+
+    }
+}
+
 void init() {
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Black background color
     glMatrixMode(GL_PROJECTION);
@@ -122,7 +137,33 @@ void init() {
 }
 
 int main(int argc, char** argv) {
-    // Initialize blue team and red team player positions
+
+    //set the signal handler for SIGUSR1 and SIGUSR2
+    sa_usr1.sa_handler = signal_handler;
+    sigemptyset(&sa_usr1.sa_mask);
+    sa_usr1.sa_flags = 0;
+
+    if (sigaction(SIGUSR1, &sa_usr1, NULL) == -1) {
+        perror("sigaction for SIGUSR1");
+        exit(EXIT_FAILURE);
+    }
+
+    sa_usr2.sa_handler = signal_handler;
+    sigemptyset(&sa_usr2.sa_mask);
+    sa_usr2.sa_flags = 0;
+
+    if (sigaction(SIGUSR2, &sa_usr2, NULL) == -1) {
+        perror("sigaction for SIGUSR2");
+        exit(EXIT_FAILURE);
+    }
+    
+    new_round(argc, argv);
+    
+    return 0;
+}
+
+void new_round(int argc, char** argv){
+     // Initialize blue team and red team player positions
     for (int i = 0; i < NUM_PLAYERS_PER_TEAM; ++i) {
         blueTeam[i].x = cos(2 * PI * i / NUM_PLAYERS_PER_TEAM) * 0.5f;
         blueTeam[i].y = sin(2 * PI * i / NUM_PLAYERS_PER_TEAM) * 0.5f - 0.5f;
@@ -136,6 +177,12 @@ int main(int argc, char** argv) {
     blueBall.vx = 0.0f;
     blueBall.vy = 0.0f;
     blueBall.moving = false;
+
+    balls[0].x = 0.8f;
+    balls[0].y = 0.0f;
+    balls[0].vx = 0.0f;
+    balls[0].vy = 0.0f;
+    balls[0].moving = false;
 
     // Initialize red ball position
     redBall.x = redTeam[0].x;
@@ -153,7 +200,6 @@ int main(int argc, char** argv) {
     glutIdleFunc(display); // Update display continuously
     init();
     glutMainLoop();
-    return 0;
 }
 
 

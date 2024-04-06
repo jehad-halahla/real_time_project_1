@@ -18,5 +18,9 @@ compile:
 run:
 	@./parent
 
+gui: 
+	@$(CC) ballpass.c -o ballpass $(LIBS_GUI)
+	@./ballpass
+
 clean:
-	@rm -f parent child parent.o child.o
+	@rm -f parent child ballpass

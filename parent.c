@@ -1,4 +1,5 @@
 #include "includes/include.h"
+#include "includes/std.h"
 
 pid_t process_pid[2*PLAYERS_PER_TEAM]; 
 unsigned player_energy[2*PLAYERS_PER_TEAM]; 
@@ -13,18 +14,26 @@ team team1;
 team team2;
 //init the two structs to 0 balls and 0 score
 
+
+// FUNCTION PROTOTYPES
+
 void create_FIFOs();
 void assign_initial_energy();
 void fork_children();
+void fork_gui();
 void init_teams();
+void read_parameters(int argc,char* argv[]);
+void create_shared_mem(); 
+void doOneRound();
+
+
+
+
+// GLOBAL VARIABLES
 
 unsigned int round_duration;
 unsigned int number_of_rounds;
-
 int current_round_number = 0;
-
-
-void read_parameters(int argc,char* argv[]);
 
 struct sigaction sa_chld, sa_io, sa_alarm, sa_usr1, sa_usr2;;
 
@@ -36,7 +45,9 @@ struct shared_data {
 
 struct shared_data *shared_mem;
 
-void create_shared_mem(); 
+
+// SIGNAL HANDLERS
+
 
 void signal_handler(int signum) {
 
@@ -65,24 +76,23 @@ void signal_handler(int signum) {
 
 
     if (signum == SIGIO) {
-
+        
         printf("entrered SIGIO from parent\n");
     }
 
     fflush(stdout);
 }
 
-
-void doOneRound();
-
 void alarm_handler(int signum) {
 
     
     shared_mem->ignore_signals = 1;
 
+
+        my_pause(4);
+
     if (team1.number_of_balls < team2.number_of_balls) {
         team1.total_score++;
-
     }
 
     else if (team1.number_of_balls > team2.number_of_balls) {
@@ -90,13 +100,13 @@ void alarm_handler(int signum) {
     }
 
 
-    my_pause(2);
-
-    printf("Team 1 score: %d, and bumber of balls: %d\n", team1.total_score, team1.number_of_balls);
-    printf("Team 2 score: %d, and bumber of balls: %d\n", team2.total_score, team2.number_of_balls);
+    cyan_stdout();
+    printf("Team 1 score: %d, and number of balls: %d\n", team1.total_score, team1.number_of_balls);
+    printf("Team 2 score: %d, and number of balls: %d\n", team2.total_score, team2.number_of_balls);
+    yellow_stdout();
     printf("Round %d finished\n", current_round_number);
-
-    my_pause(2);
+    reset_stdout();
+    my_pause(4);
 
     if (current_round_number < number_of_rounds) {
         doOneRound();
@@ -105,15 +115,21 @@ void alarm_handler(int signum) {
     else {
         // print the final scores and the winner
         if (team1.total_score > team2.total_score) {
+            green_stdout();
             printf("Team 1 wins\n");
+            reset_stdout();
         }
 
         else if (team1.total_score < team2.total_score) {
+            red_stdout();
             printf("Team 2 wins\n");
+            reset_stdout();
         }
 
         else {
+            blue_stdout();
             printf("It's a tie\n");
+            reset_stdout();
         }
 
         // remove the FIFOs
@@ -122,7 +138,6 @@ void alarm_handler(int signum) {
         
         for (int i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
             kill(process_pid[i], SIGKILL);
-         //   usleep(1000);
         }
 
         exit(0);
@@ -135,14 +150,12 @@ int main(int argc, char *argv[]) {
 
 
     read_parameters(argc, argv);
-
     create_shared_mem();
-
+    
     //create the FIFOs
     create_FIFOs();
     fork_children();
     init_teams();
-
 
     // Set up SIGCHLD handler
     sa_chld.sa_handler = signal_handler;
@@ -199,7 +212,7 @@ int main(int argc, char *argv[]) {
         perror("Error opening FIFO1");
         exit(-1);
     }
-
+    //pasing 5 and 6 as edge cases
     int arr[2]  = {process_pid[5], process_pid[6]};
 
 
@@ -214,25 +227,26 @@ int main(int argc, char *argv[]) {
     fd = open(FIFO2, O_WRONLY);
 
     if (fd == -1) {
+        red_stderr();
         perror("Error opening FIFO2");
+        reset_stderr();
         exit(-1);
     }
 
     if (write(fd, &process_pid[0], sizeof(pid_t)) == -1) {
+        red_stderr();
         perror("Error writing to FIFO2");
+        reset_stderr();
         exit(-1);
     }
 
     close(fd);
 
     //sending the signal to both team leads
-    //
 
-    doOneRound();
-
+   doOneRound();
     
     // wait for all children to finish
-
     for (int i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
         waitpid(process_pid[i], &status, 0);
     }
@@ -249,7 +263,6 @@ int main(int argc, char *argv[]) {
 void assign_initial_energy() {
 
     for (int i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
-
         player_energy[i] =  MIN_PLAYER_ENERGY + (rand() % (abs(MAX_PLAYER_ENERGY - MIN_PLAYER_ENERGY)));
     }
 }
@@ -291,7 +304,9 @@ void doOneRound() {
     shared_mem->ignore_signals = 0;
 
     // Start new round
+    magenta_stdout();
     printf("Starting new round...\n");
+    reset_stdout();
 
     team1.number_of_balls = 0;
     team2.number_of_balls = 0;
@@ -392,20 +407,26 @@ void create_shared_mem() {
     // Create a shared memory segment
     fd_shm = shm_open("/my_shared_memory", O_CREAT | O_RDWR, 0666);
     if (fd_shm == -1) {
+        red_stderr();
         perror("shm_open");
+        reset_stderr();
         exit(EXIT_FAILURE);
     }
 
     // Set the size of the shared memory segment
     if (ftruncate(fd_shm, sizeof(struct shared_data)) == -1) {
+        red_stderr();
         perror("ftruncate");
+        reset_stderr();
         exit(EXIT_FAILURE);
     }
 
     // Map the shared memory segment into the address space
     shared_mem = mmap(NULL, sizeof(struct shared_data), PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
     if (shared_mem == MAP_FAILED) {
+        red_stderr();
         perror("mmap");
+        reset_stderr();
         exit(EXIT_FAILURE);
     }
 
@@ -422,7 +443,9 @@ void read_parameters(int argc,char* argv[]) {
     // Open the file for reading
     file = fopen("settings.txt", "r");
     if (file == NULL) {
-        printf("Error opening file.\n");
+        red_stderr();
+        perror("Error opening file");
+        reset_stderr();
         return ;
     }
 
@@ -435,4 +458,21 @@ void read_parameters(int argc,char* argv[]) {
     // Use sscanf to extract the numbers
     sscanf(line, "round_duration=%d, number_of_rounds=%d", &round_duration, &number_of_rounds);
 
+}
+
+
+void fork_gui(){
+
+    pid_t gui_pid;
+
+    if ((gui_pid = fork()) == -1) {
+        perror("Fork failed.\n");
+        exit(1);
+    }
+
+    if (gui_pid == 0) {
+        execlp("./ballPass", "ballPass.o", (const char*)NULL);
+        perror("execvp failed.\n");
+        exit(2);
+    }
 }
