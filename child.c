@@ -266,6 +266,7 @@ void open_shared_mem() {
 
 
 void send_ball(int next_player_pid, int signum, int next_player_number) {
+
     kill(gui_pid, SIGUSR1);
     my_pause(short_pause_duration()); // Assuming my_pause is already defined elsewhereo
     
@@ -280,7 +281,9 @@ void send_ball(int next_player_pid, int signum, int next_player_number) {
         perror("Error writing to GUI FIFO");
         exit(-1);
     }
+
     close(fd);
+
 
     printf("sending ball %d(%d) -> %d(%d)\n", getpid(), player_number, next_player_pid, next_player_number);
     fflush(stdout);

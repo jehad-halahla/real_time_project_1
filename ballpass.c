@@ -22,6 +22,8 @@ struct Ball {
 struct Player {
     float x;
     float y;
+
+    struct Ball* ball;
 };
 
 int sender, receiver;
@@ -89,7 +91,7 @@ void updateBallPosition(struct Ball* ball, struct Player* targetPlayer, float sp
         // Check if ball reached the destination
         if (fabs(ball->x - targetPlayer->x) < 0.01 && fabs(ball->y - targetPlayer->y) < 0.01) {
             ball->moving = false;
-            if (ball == &blueBall){
+            if (ball == &balls[0]){
                 blueActivePlayer = (blueActivePlayer + 1) % NUM_PLAYERS_PER_TEAM; // Update active player for blue team
             } else {
                 redActivePlayer = (redActivePlayer + 1) % NUM_PLAYERS_PER_TEAM; // Update active player for red team
@@ -107,10 +109,10 @@ void passBall(struct Ball* ball, struct Player* targetPlayer, float speed) {
 void keyboard(unsigned char key, int x, int y) {
     switch (key) {
         case 'p': // 'p' key to pass the blue ball
-            passBall(&blueBall, &blueTeam[(blueActivePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
+            passBall(&balls[0], &blueTeam[(blueActivePlayer)], 0.01f);
             break;
         case 'P': // 'P' key to pass the red ball
-            passBall(&redBall, &redTeam[(redActivePlayer + 1) % NUM_PLAYERS_PER_TEAM], 0.01f);
+            passBall(&redBall, &redTeam[(redActivePlayer) % NUM_PLAYERS_PER_TEAM], 0.01f);
             break;
     }
     glutPostRedisplay();
@@ -148,7 +150,7 @@ void signal_handler(int signum){
 
         if (sender <= 5)
             passBall(&balls[0], &blueTeam[blueActivePlayer], SPEED);
-
+        
     }
 
     else if(signum == SIGUI){

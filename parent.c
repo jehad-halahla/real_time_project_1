@@ -344,6 +344,8 @@ void doOneRound() {
     kill(process_pid[5], SIGUSR1);
     kill(gui_pid, SIGUSR1);
     
+    sleep(1);
+
     int fd_1 = open(GUI_FIFO, O_WRONLY);
     
 
@@ -358,6 +360,27 @@ void doOneRound() {
     }
     
     close(fd_1);
+
+    
+    /*
+    kill(gui_pid, SIGUSR1);
+
+    sleep(2);
+
+    fd_1 = open(GUI_FIFO, O_WRONLY);
+    if (fd_1 == -1) {
+        perror("Error opening GUI FIFO");
+        exit(-1);
+    }
+
+    if (write(fd_1, "5#0", sizeof(char) * 6) == -1) {
+        perror("Error writing to GUI FIFO");
+        exit(-1);
+    }
+
+    close(fd_1);
+   */
+
 
 
     // send a ball to team2 leader (send a signal to the team2 leader)
