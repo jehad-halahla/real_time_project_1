@@ -4,9 +4,6 @@
 
 struct sigaction sa_usr1, sa_usr2, sa_ui;
 
-#define MAX_NUM_BALLS 1
-#define SIGUI SIGUSR1
-
 const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 600;
 const float PI = 3.14159265359f;
@@ -56,8 +53,11 @@ void display() {
     drawPlayers(blueTeam, 0.0f, 0.0f, 1.0f); // Blue color for blue team players
     // Draw red team
     drawPlayers(redTeam, 1.0f, 0.0f, 0.0f); // Red color for red team players
+    //keep track of the balls
     updateBallPosition(&balls[0], &blueTeam[blueActivePlayer], SPEED*2);
+    updateBallPosition(&balls[1], &redTeam[redActivePlayer], SPEED*2);
     drawBall(balls[0].x, balls[0].y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for balls
+    drawBall(balls[1].x, balls[1].y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for balls
     glFlush();
 }
 
@@ -76,7 +76,7 @@ void updateBallPosition(struct Ball* ball, struct Player* targetPlayer, float sp
         ball->moving = false;
         if (ball == &balls[0]) {
             blueActivePlayer = (blueActivePlayer + 1) % NUM_PLAYERS_PER_TEAM; // Update active player for blue team to next player
-        } else {
+        } else if (ball == &balls[1]){
             redActivePlayer = (redActivePlayer + 1) % NUM_PLAYERS_PER_TEAM; // Update active player for red team
         }
     }
@@ -169,7 +169,8 @@ void signal_handler(int signum){
         new_round();
     }
     else if(signum == SIGUSR2){
-
+          printf("SIGUSR2 received --> %d\n", redActivePlayer);
+            passBall(&balls[1], &redTeam[redActivePlayer], 2*SPEED);
     }
 }
 
@@ -189,6 +190,10 @@ void new_round() {
     balls[0].y = 0.0f;
     balls[0].vx = 0.0f;
     balls[0].vy = 0.0f;
+    balls[1].x = 0.8f;
+    balls[1].y = 0.0f;
+    balls[1].vx = 0.0f;
+    balls[1].vy = 0.0f;
 }
 
 int main(int argc, char** argv) {

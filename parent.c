@@ -57,6 +57,10 @@ void signal_handler(int signum) {
 
         // if team2 has no balls, send a signal to the team2 leader to get a ball. 
         if (team2.number_of_balls == 0) {
+            green_stdout();
+            printf("Team 2 has no balls, sending a signal to team2 leader to get a ball\n");
+            reset_stdout();
+            team2.number_of_balls++;
             kill(process_pid[11], SIGUSR1);
         }
 
@@ -69,6 +73,10 @@ void signal_handler(int signum) {
 
         // if team1 has no balls, send a signal to the team1 leader to get a ball.
         if (team1.number_of_balls == 0) {
+            green_stdout();
+            printf("Team 1 has no balls, sending a signal to team1 leader to get a ball\n");
+            reset_stdout();
+            team1.number_of_balls++;
             kill(process_pid[5], SIGUSR1);
         }
     }
@@ -358,8 +366,8 @@ void doOneRound() {
 
 
     // send a ball to team2 leader (send a signal to the team2 leader)
-    // team2.number_of_balls++;
-    // kill(process_pid[11], SIGUSR1);
+    team2.number_of_balls++;
+    kill(process_pid[11], SIGUSR1);
 
 }
 

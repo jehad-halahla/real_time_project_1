@@ -270,7 +270,12 @@ void open_shared_mem() {
 
 void send_ball(int next_player_pid, int signum, int next_player_number) {
     #ifdef __GUI__
-    kill(gui_pid, SIGUSR1);
+    if(player_number <= 5){
+        kill(gui_pid, SIGUSR1);
+    }
+    else{
+        kill(gui_pid, SIGUSR2);
+    }
     #endif
 
     my_pause(short_pause_duration());
@@ -301,6 +306,7 @@ void send_ball(int next_player_pid, int signum, int next_player_number) {
         fflush(stdout);
         energy = (energy > 20) ? energy - 3 : 20;
         my_pause(short_pause_duration());
+        kill(next_player_pid, signum);
     }
     else{
         kill(next_player_pid, signum);
