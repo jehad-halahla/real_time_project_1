@@ -18,7 +18,19 @@ compile:
 run:
 	@./parent
 
-gui: 
+
+
+compile_gui:
+	@echo "Compiling..."
+	@$(CC) parent.c -o parent $(LIBS) -D__GUI__
+	@$(CC) child.c -o child $(LIBS)
+	@$(CC) ballpass.c -o ballpass $(LIBS_GUI)
+
+
+run_gui: compile_gui
+	@./parent
+
+test_gui: 
 	@$(CC) ballpass.c -o ballpass $(LIBS_GUI)
 	@./ballpass
 

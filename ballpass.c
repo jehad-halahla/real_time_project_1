@@ -3,7 +3,7 @@
 #include <GL/gl.h>
 
 
-struct sigaction sa_usr1, sa_usr2;
+struct sigaction sa_usr1, sa_usr2, sa_ui;
 
 
 const int WINDOW_WIDTH = 800;
@@ -24,15 +24,16 @@ struct Player {
     float y;
 };
 
+int sender, receiver;
 
 struct Ball balls[MAX_NUM_BALLS];
 
 void updateBallPosition(struct Ball* ball, struct Player* targetPlayer, float speed);
-void new_round(int argc, char** argv);
+void new_round();
 struct Ball blueBall, redBall;
 
 struct Player blueTeam[NUM_PLAYERS_PER_TEAM], redTeam[NUM_PLAYERS_PER_TEAM];
-int blueActivePlayer = 0; // Index of the player currently in possession of the blue ball
+int blueActivePlayer = 5; // Index of the player currently in possession of the blue ball
 int redActivePlayer = 0;  // Index of the player currently in possession of the red ball
 
 void drawSquare(float x, float y, float size, float r, float g, float b) {
@@ -54,7 +55,7 @@ void drawBall(float x, float y, float size, float r, float g, float b) {
 
 void drawPlayers(struct Player team[], float r, float g, float b) {
     for (int i = 0; i < NUM_PLAYERS_PER_TEAM; ++i) {
-        if (i == 0) {
+        if (i == 5) {
             if (r == 1.0f && g == 0.0f && b == 0.0f) // Red team
                 drawSquare(team[i].x, team[i].y, 0.05f, 0.0f, 1.0f, 0.0f); // Green color for first red player
             else if (r == 0.0f && g == 0.0f && b == 1.0f) // Blue team
@@ -66,6 +67,7 @@ void drawPlayers(struct Player team[], float r, float g, float b) {
 }
 
 void display() {
+
     glClear(GL_COLOR_BUFFER_BIT);
     // Draw blue team
     drawPlayers(blueTeam, 0.0f, 0.0f, 1.0f); // Blue color for blue team players
@@ -73,7 +75,8 @@ void display() {
     // Draw red team
     drawPlayers(redTeam, 1.0f, 0.0f, 0.0f); // Red color for red team players
 
-    updateBallPosition(&balls[0], &blueTeam[0], SPEED);
+    updateBallPosition(&balls[0], &blueTeam[blueActivePlayer], SPEED);
+
     drawBall((balls[0].x) , balls[0].y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for balls
     glFlush();
 }
@@ -116,14 +119,43 @@ void keyboard(unsigned char key, int x, int y) {
 void signal_handler(int signum){
     if(signum == SIGUSR1){
 
-        printf("SIGUSR1 received\n");   
-        passBall(&balls[0], &blueTeam[0], SPEED);
+        // open FIFO 
+        int fd = open(GUI_FIFO, O_RDONLY);
+        
+        if (fd == -1) {
+            perror("open");
+            exit(EXIT_FAILURE);
+        }
+
+        // read from FIFO
+
+        char buffer[6];
+        //sender#receiver
+        
+        if (read(fd, buffer, sizeof(buffer)) == -1) {
+            perror("read");
+            exit(EXIT_FAILURE);
+        }
+
+        close(fd);
+
+        if (sscanf(buffer, "%d#%d", &sender, &receiver) != 2) {
+            fprintf(stderr, "Invalid input format\n");
+            exit(EXIT_FAILURE);
+        }
+
+        printf("sender: %d, receiver: %d\n", sender, receiver);
+
+        if (sender <= 5)
+            passBall(&balls[0], &blueTeam[blueActivePlayer], SPEED);
+
+    }
+
+    else if(signum == SIGUI){
+        printf("SIGUI received\n");
+        new_round();
     }
     else if(signum == SIGUSR2){
-        printf("SIGUSR2 received\n");
-        passBall(&balls[0], &redTeam[0], SPEED);
-    }
-    else if(signum == UISIG){
 
     }
 }
@@ -156,41 +188,18 @@ int main(int argc, char** argv) {
         perror("sigaction for SIGUSR2");
         exit(EXIT_FAILURE);
     }
-    
-    new_round(argc, argv);
-    
-    return 0;
-}
 
-void new_round(int argc, char** argv){
-     // Initialize blue team and red team player positions
-    for (int i = 0; i < NUM_PLAYERS_PER_TEAM; ++i) {
-        blueTeam[i].x = cos(2 * PI * i / NUM_PLAYERS_PER_TEAM) * 0.5f;
-        blueTeam[i].y = sin(2 * PI * i / NUM_PLAYERS_PER_TEAM) * 0.5f - 0.5f;
-        redTeam[i].x = cos(2 * PI * i / NUM_PLAYERS_PER_TEAM) * 0.5f;
-        redTeam[i].y = sin(2 * PI * i / NUM_PLAYERS_PER_TEAM) * 0.5f + 0.5f;
+    sa_ui.sa_handler = signal_handler;
+    sigemptyset(&sa_ui.sa_mask);
+    sa_ui.sa_flags = 0;
+
+    if (sigaction(SIGUI, &sa_ui, NULL) == -1) {
+        perror("sigaction for SIGUI");
+        exit(EXIT_FAILURE);
     }
 
-    // Initialize blue ball position
-    blueBall.x = blueTeam[0].x;
-    blueBall.y = blueTeam[0].y + 0.05f; // A little above the first blue player
-    blueBall.vx = 0.0f;
-    blueBall.vy = 0.0f;
-    blueBall.moving = false;
-
-    balls[0].x = 0.8f;
-    balls[0].y = 0.0f;
-    balls[0].vx = 0.0f;
-    balls[0].vy = 0.0f;
-    balls[0].moving = false;
-
-    // Initialize red ball position
-    redBall.x = redTeam[0].x;
-    redBall.y = redTeam[0].y - 0.05f; // A little below the first red player
-    redBall.vx = 0.0f;
-    redBall.vy = 0.0f;
-    redBall.moving = false;
-
+    
+    new_round();
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
     glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -200,6 +209,28 @@ void new_round(int argc, char** argv){
     glutIdleFunc(display); // Update display continuously
     init();
     glutMainLoop();
+    
+    return 0;
+}
+
+void new_round() {
+
+    balls[0].moving = false;
+
+     // Initialize blue team and red team player positions
+    for (int i = 0; i < NUM_PLAYERS_PER_TEAM; ++i) {
+        blueTeam[i].x = cos(2 * PI * (5-i) / NUM_PLAYERS_PER_TEAM) * 0.5f;
+        blueTeam[i].y = sin(2 * PI * (5-i) / NUM_PLAYERS_PER_TEAM) * 0.5f - 0.5f;
+        redTeam[i].x = cos(2 * PI * (5-i) / NUM_PLAYERS_PER_TEAM) * 0.5f;
+        redTeam[i].y = sin(2 * PI * (5-i) / NUM_PLAYERS_PER_TEAM) * 0.5f + 0.5f;
+    }
+
+
+    balls[0].x = 0.8f;
+    balls[0].y = 0.0f;
+    balls[0].vx = 0.0f;
+    balls[0].vy = 0.0f;
+
 }
 
 

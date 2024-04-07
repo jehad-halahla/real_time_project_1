@@ -13,6 +13,8 @@ pid_t pid_of_team2_leader;
 pid_t next_player_pid;
 double short_pause_duration();
 
+int gui_pid;
+
 pid_t this_team_leader_pid;
 pid_t other_team_leader_pid;
 void send_ball_to_next_player();
@@ -152,6 +154,7 @@ int main(int argc, char* argv[]) {
     pid_of_team1_leader = atoi(argv[4]);
     pid_of_team2_leader = atoi(argv[5]);
     next_player_pid = atoi(argv[6]); 
+    gui_pid = atoi(argv[7]);
 
 
     // Set up SIGUSR1 handler
@@ -263,9 +266,27 @@ void open_shared_mem() {
 
 
 void send_ball(int next_player_pid, int signum, int next_player_number) {
-    my_pause(short_pause_duration()); // Assuming my_pause is already defined elsewhere
+    kill(gui_pid, SIGUSR1);
+    my_pause(short_pause_duration()); // Assuming my_pause is already defined elsewhereo
+    
+    int fd = open(GUI_FIFO, O_WRONLY);
+    if (fd == -1) {
+        perror("Error opening GUI FIFO");
+        exit(-1);
+    }
+    char message[8];
+    sprintf(message, "%d#%d", player_number, next_player_number);
+    if (write(fd, message, 8) == -1) {
+        perror("Error writing to GUI FIFO");
+        exit(-1);
+    }
+    close(fd);
+
     printf("sending ball %d(%d) -> %d(%d)\n", getpid(), player_number, next_player_pid, next_player_number);
     fflush(stdout);
     kill(next_player_pid, signum);
 }
+
+
+
 

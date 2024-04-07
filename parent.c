@@ -26,8 +26,7 @@ void read_parameters(int argc,char* argv[]);
 void create_shared_mem(); 
 void doOneRound();
 
-
-
+int gui_pid = -1;
 
 // GLOBAL VARIABLES
 
@@ -147,6 +146,26 @@ void alarm_handler(int signum) {
 }
 
 int main(int argc, char *argv[]) {
+
+#ifdef __GUI__
+
+    gui_pid = fork();
+
+    if (gui_pid == 0) {
+
+        execlp("./ballpass", "ballpass.o", (const char*)NULL);
+    }
+
+    else if (gui_pid == -1) {
+        perror("GUI failed.\n");
+    }
+    
+    else {
+        sleep(1);
+    }
+
+
+#endif 
 
 
     read_parameters(argc, argv);
@@ -296,6 +315,12 @@ void create_FIFOs()
         perror("Error Creating Fifo");
         exit(-1);
     }
+
+    if ((mkfifo(GUI_FIFO, S_IFIFO | 0777)) == -1 && errno != EEXIST)
+    {
+        perror("Error Creating Fifo");
+        exit(-1);
+    }
 }
 
 
@@ -317,6 +342,23 @@ void doOneRound() {
     // send a ball to team1 leader (send a signal to the team1 leader)
     team1.number_of_balls++;
     kill(process_pid[5], SIGUSR1);
+    kill(gui_pid, SIGUSR1);
+    
+    int fd_1 = open(GUI_FIFO, O_WRONLY);
+    
+
+    if (fd_1 == -1) {
+        perror("Error opening GUI FIFO");
+        exit(-1);
+    }
+
+    if (write(fd_1, "-1#5", sizeof(char) * 5) == -1) {
+        perror("Error writing to GUI FIFO");
+        exit(-1);
+    }
+    
+    close(fd_1);
+
 
     // send a ball to team2 leader (send a signal to the team2 leader)
     team2.number_of_balls++;
@@ -352,6 +394,7 @@ void fork_children(){
         char player_number_arg[4];
         char energy_arg[20];
         char next_player_arg[20]; 
+        char gui_pid_arg[20];
 
         srand(time(NULL)); 
         assign_initial_energy();
@@ -378,8 +421,10 @@ void fork_children(){
             
             sprintf(next_player_arg, "%d",next_player);
             sprintf(next_player_pid_arg, "%d", process_pid[next_player]);
+        
+            sprintf(gui_pid_arg, "%d", gui_pid);
 
-            execlp("./child" ,"child.o",player_number_arg, energy_arg, next_player_arg, team1_leader_pid_arg, team2_leader_pid_arg,next_player_pid_arg, (const char*)NULL);
+            execlp("./child" ,"child.o",player_number_arg, energy_arg, next_player_arg, team1_leader_pid_arg, team2_leader_pid_arg,next_player_pid_arg, gui_pid_arg ,(const char*)NULL);
 
             perror("execvp failed.\n");
             
