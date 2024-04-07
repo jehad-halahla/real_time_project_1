@@ -1,4 +1,3 @@
-
 CC := gcc
 CFLAGS := -Wall
 SRCS := parent.c child.c
@@ -6,16 +5,14 @@ OBJS = $(SRCS:.c=.o)
 LIBS_GUI = -lglut -lGLU -lGL -lm
 LIBS = -lm
 
-default: compile run
+default: run
 
 compile:
-
 	@echo "Compiling..."
-
 	@$(CC) parent.c -o parent $(LIBS)
 	@$(CC) child.c -o child $(LIBS)
 
-run:
+run: compile
 	@./parent
 
 
@@ -23,7 +20,7 @@ run:
 compile_gui:
 	@echo "Compiling..."
 	@$(CC) parent.c -o parent $(LIBS) -D__GUI__
-	@$(CC) child.c -o child $(LIBS)
+	@$(CC) child.c -o child $(LIBS) -D__GUI__
 	@$(CC) ballpass.c -o ballpass $(LIBS_GUI)
 
 

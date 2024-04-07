@@ -167,7 +167,6 @@ int main(int argc, char *argv[]) {
 
 #endif 
 
-
     read_parameters(argc, argv);
     create_shared_mem();
     
@@ -315,12 +314,13 @@ void create_FIFOs()
         perror("Error Creating Fifo");
         exit(-1);
     }
-
+#ifdef __GUI__
     if ((mkfifo(GUI_FIFO, S_IFIFO | 0777)) == -1 && errno != EEXIST)
     {
         perror("Error Creating Fifo");
         exit(-1);
     }
+#endif
 }
 
 
@@ -342,13 +342,10 @@ void doOneRound() {
     // send a ball to team1 leader (send a signal to the team1 leader)
     team1.number_of_balls++;
     kill(process_pid[5], SIGUSR1);
+    #ifdef __GUI__
     kill(gui_pid, SIGUSR1);
-    
-    sleep(1);
-
     int fd_1 = open(GUI_FIFO, O_WRONLY);
     
-
     if (fd_1 == -1) {
         perror("Error opening GUI FIFO");
         exit(-1);
@@ -360,8 +357,8 @@ void doOneRound() {
     }
     
     close(fd_1);
+    #endif
 
-    
     /*
     kill(gui_pid, SIGUSR1);
 

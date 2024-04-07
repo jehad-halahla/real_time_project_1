@@ -42,7 +42,7 @@ typedef struct team {
 
 
 #ifndef MIN_PLAYER_ENERGY
-#define MIN_PLAYER_ENERGY 50 // test value, might change later.
+#define MIN_PLAYER_ENERGY 80 // test value, might change later.
 #endif
 
 #define MAX_NUM_BALLS 10  // Number of balls
@@ -57,4 +57,4 @@ typedef struct team {
 #define TEAM2_LEADER 11
 
 
-#define SPEED 0.01f
+#define SPEED 0.1f

@@ -52,10 +52,13 @@ void signal_handler_usr1(int signum) {
 
         if (player_number != 10 && player_number != 4) { //all players except player 10 and 4 
 
+
+            energy = (energy > 20) ? energy - 5 : 20;
             send_ball(next_player_pid, SIGUSR1, next_player_number);
         }
 
         else {
+            energy = (energy > 20) ? energy - 5 : 20;
             send_ball(next_player_pid, SIGUSR2, next_player_number);
         }
 
@@ -76,13 +79,13 @@ void signal_handler_usr2 (int signum) {
 
         // only players 11 ,5  receive this signal (for now, testing purposes)
         if(player_number == 11){
-
+            energy = (energy > 20) ? energy - 5 : 20;
             send_ball(pid_of_team1_leader, SIGUSR1, TEAM1_LEADER);
             kill(getppid(), SIGUSR1); // send a signal to the parent process to change count of balls
         }
 
         else { //team 1 leader
-
+            energy = (energy > 20) ? energy - 5 : 20;
             send_ball(pid_of_team2_leader, SIGUSR1, TEAM2_LEADER);
             kill(getppid(), SIGUSR2); // send a signal to the parent process to change count of balls
         }
@@ -266,10 +269,12 @@ void open_shared_mem() {
 
 
 void send_ball(int next_player_pid, int signum, int next_player_number) {
-
+    #ifdef __GUI__
     kill(gui_pid, SIGUSR1);
-    my_pause(short_pause_duration()); // Assuming my_pause is already defined elsewhereo
+    #endif
+    my_pause(short_pause_duration());
     
+    #ifdef __GUI__
     int fd = open(GUI_FIFO, O_WRONLY);
     if (fd == -1) {
         perror("Error opening GUI FIFO");
@@ -283,9 +288,9 @@ void send_ball(int next_player_pid, int signum, int next_player_number) {
     }
 
     close(fd);
+    #endif
 
-
-    printf("sending ball %d(%d) -> %d(%d)\n", getpid(), player_number, next_player_pid, next_player_number);
+    printf("sending ball %d(%d) -> %d(%d), remaining energy is: %d\n", getpid(), player_number, next_player_pid, next_player_number,energy);
     fflush(stdout);
     kill(next_player_pid, signum);
 }
