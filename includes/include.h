@@ -17,7 +17,7 @@
 #include <stdbool.h>
 #include <sys/mman.h>
 #include <bits/types/sigset_t.h>
-#include "includes/functions.c"
+#include "functions.c"
 
 #define PLAYERS_PER_TEAM 6
 
@@ -51,10 +51,10 @@ typedef struct team {
 #define FIFO2 "/tmp/FIFO2" // for team 2
 #define GUI_FIFO "/tmp/FIFO_GUI" // for the gui process
 
-#define UISIG 7
+#define SIGUI 7
 
 #define TEAM1_LEADER 5
 #define TEAM2_LEADER 11
 
 
-#define SPEED 0.1f
+#define SPEED 0.01f
