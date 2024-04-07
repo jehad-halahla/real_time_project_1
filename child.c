@@ -272,22 +272,23 @@ void send_ball(int next_player_pid, int signum, int next_player_number) {
     #ifdef __GUI__
     kill(gui_pid, SIGUSR1);
     #endif
+
     my_pause(short_pause_duration());
     
     #ifdef __GUI__
-    int fd = open(GUI_FIFO, O_WRONLY);
-    if (fd == -1) {
-        perror("Error opening GUI FIFO");
-        exit(-1);
-    }
-    char message[8];
-    sprintf(message, "%d#%d", player_number, next_player_number);
-    if (write(fd, message, 8) == -1) {
-        perror("Error writing to GUI FIFO");
-        exit(-1);
-    }
+    // int fd = open(GUI_FIFO, O_WRONLY);
+    // if (fd == -1) {
+    //     perror("Error opening GUI FIFO");
+    //     return;
+    // }
+    // char message[8];
+    // sprintf(message, "%d#%d", player_number, next_player_number);
+    // if (write(fd, message, 8) == -1) {
+    //     perror("Error writing to GUI FIFO");
+    //     return;
+    // }
 
-    close(fd);
+    // close(fd);
     #endif
 
     printf("sending ball %d(%d) -> %d(%d), remaining energy is: %d\n", getpid(), player_number, next_player_pid, next_player_number,energy);
@@ -301,13 +302,15 @@ void send_ball(int next_player_pid, int signum, int next_player_number) {
         energy = (energy > 20) ? energy - 3 : 20;
         my_pause(short_pause_duration());
     }
-    kill(next_player_pid, signum);
+    else{
+        kill(next_player_pid, signum);
+    }
+    
 }
 
 bool player_drops_ball() {
     srand(time(NULL)); // Seed the random number generator with the current time
     int random_number = rand() % 100; // Generate a random number between 0 and 99
-
     // Let's say there's a 5% chance the player will drop the ball
     if (random_number < 5) {
         return true; // Player drops the ball

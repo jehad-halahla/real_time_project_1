@@ -58,4 +58,4 @@ typedef struct team {
 #define TEAM2_LEADER 11
 
 
-#define SPEED 0.1f
+#define SPEED .1f

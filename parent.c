@@ -166,7 +166,6 @@ int main(int argc, char *argv[]) {
 
 
 #endif 
-
     read_parameters(argc, argv);
     create_shared_mem();
     
@@ -174,7 +173,7 @@ int main(int argc, char *argv[]) {
     create_FIFOs();
     fork_children();
     init_teams();
-
+    
     // Set up SIGCHLD handler
     sa_chld.sa_handler = signal_handler;
     sigemptyset(&sa_chld.sa_mask);
@@ -233,14 +232,11 @@ int main(int argc, char *argv[]) {
     //pasing 5 and 6 as edge cases
     int arr[2]  = {process_pid[5], process_pid[6]};
 
-
     if (write(fd, arr, sizeof(int) * 2) == -1) {
         perror("Error writing to FIFOR1");
         exit(-1);
     }
-
     close(fd);
-
 
     fd = open(FIFO2, O_WRONLY);
 
@@ -268,7 +264,8 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
         waitpid(process_pid[i], &status, 0);
     }
-    
+    waitpid(gui_pid, &status, 0);
+
     munmap(shared_mem, sizeof(struct shared_data));
     close(fd_shm);
 
@@ -343,46 +340,26 @@ void doOneRound() {
     team1.number_of_balls++;
     kill(process_pid[5], SIGUSR1);
     #ifdef __GUI__
-    kill(gui_pid, SIGUSR1);
-    int fd_1 = open(GUI_FIFO, O_WRONLY);
+    // kill(gui_pid, SIGUSR1);
+    // int fd_1 = open(GUI_FIFO, O_WRONLY);
     
-    if (fd_1 == -1) {
-        perror("Error opening GUI FIFO");
-        exit(-1);
-    }
+    // if (fd_1 == -1) {
+    //     perror("Error opening GUI FIFO");
+    //     exit(-1);
+    // }
 
-    if (write(fd_1, "-1#5", sizeof(char) * 5) == -1) {
-        perror("Error writing to GUI FIFO");
-        exit(-1);
-    }
+    // if (write(fd_1, "-1#5", sizeof(char) * 5) == -1) {
+    //     perror("Error writing to GUI FIFO");
+    //     exit(-1);
+    // }
     
-    close(fd_1);
+    // close(fd_1);
     #endif
-
-    /*
-    kill(gui_pid, SIGUSR1);
-
-    sleep(2);
-
-    fd_1 = open(GUI_FIFO, O_WRONLY);
-    if (fd_1 == -1) {
-        perror("Error opening GUI FIFO");
-        exit(-1);
-    }
-
-    if (write(fd_1, "5#0", sizeof(char) * 6) == -1) {
-        perror("Error writing to GUI FIFO");
-        exit(-1);
-    }
-
-    close(fd_1);
-   */
-
 
 
     // send a ball to team2 leader (send a signal to the team2 leader)
-    team2.number_of_balls++;
-    kill(process_pid[11], SIGUSR1);
+    // team2.number_of_balls++;
+    // kill(process_pid[11], SIGUSR1);
 
 }
 
