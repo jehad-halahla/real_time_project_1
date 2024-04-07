@@ -1,7 +1,7 @@
 #include "includes/include.h"
+#include "includes/std.h"
+#include <asm-generic/signal-defs.h>
 
-// include sigignore()
-#include <signal.h>
 unsigned energy;
 unsigned player_number;
 unsigned next_player_number;
@@ -12,7 +12,7 @@ pid_t pid_of_team1_leader;
 pid_t pid_of_team2_leader;
 pid_t next_player_pid;
 double short_pause_duration();
-
+bool player_drops_ball();
 int gui_pid;
 
 pid_t this_team_leader_pid;
@@ -292,9 +292,29 @@ void send_ball(int next_player_pid, int signum, int next_player_number) {
 
     printf("sending ball %d(%d) -> %d(%d), remaining energy is: %d\n", getpid(), player_number, next_player_pid, next_player_number,energy);
     fflush(stdout);
+    if (player_drops_ball()) {
+        red_stdout();
+        printf("Player %d dropped the ball\n", player_number);
+        printf("sending ball %d(%d) -> %d(%d), remaining energy is: %d\n", getpid(), player_number, next_player_pid, next_player_number,energy);
+        reset_stdout();
+        fflush(stdout);
+        energy = (energy > 20) ? energy - 3 : 20;
+        my_pause(short_pause_duration());
+    }
     kill(next_player_pid, signum);
 }
 
+bool player_drops_ball() {
+    srand(time(NULL)); // Seed the random number generator with the current time
+    int random_number = rand() % 100; // Generate a random number between 0 and 99
+
+    // Let's say there's a 5% chance the player will drop the ball
+    if (random_number < 5) {
+        return true; // Player drops the ball
+    } else {
+        return false; // Player does not drop the ball
+    }
+}
 
 
 

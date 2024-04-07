@@ -19,6 +19,7 @@
 #include <bits/types/sigset_t.h>
 #include "functions.c"
 
+
 #define PLAYERS_PER_TEAM 6
 
 typedef struct player {
