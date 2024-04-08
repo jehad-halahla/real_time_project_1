@@ -132,44 +132,65 @@ void keyboard(unsigned char key, int x, int y) {
 
 void signal_handler(int signum){
     if(signum == SIGUSR1){
-
-        // open FIFO 
-        // int fd = open(GUI_FIFO, O_RDONLY);
+        //open FIFO
+        sighold(SIGUSR1);
+        sighold(SIGUSR2); 
+        int fd = open(GUI_FIFO, O_RDONLY);
         
-        // if (fd == -1) {
-        //     perror("open");
-        //     exit(EXIT_FAILURE);
-        // }
+        if (fd == -1) {
+            perror("open");
+            exit(EXIT_FAILURE);
+        }
 
-        // // read from FIFO
-
-        // char buffer[6];
-        // //sender#receiver
+        // read from FIFO
+        char buffer[6];
+        //sender#receiver
         
-        // if (read(fd, buffer, sizeof(buffer)) == -1) {
-        //     perror("read");
-        //     exit(EXIT_FAILURE);
-        // }
+        if (read(fd, buffer, sizeof(buffer)) == -1) {
+            perror("read");
+            exit(EXIT_FAILURE);
+        }
 
-        // close(fd);
+        close(fd);
+        sigrelse(SIGUSR2);
+        sigrelse(SIGUSR1);
 
-        // if (sscanf(buffer, "%d#%d", &sender, &receiver) != 2) {
-        //     fprintf(stderr, "Invalid input format\n");
-        //     exit(EXIT_FAILURE);
-        // }
+        if (sscanf(buffer, "%d#%d", &sender, &receiver) != 2) {
+            fprintf(stderr, "Invalid input format\n");
+            exit(EXIT_FAILURE);
+        }
 
-        // printf("sender: %d, receiver: %d\n", sender, receiver);
-            printf("SIGUSR1 received --> %d\n", blueActivePlayer);
+            printf("sender: %d, receiver: %d\n", sender, receiver);
             passBall(&balls[0], &blueTeam[blueActivePlayer], 2*SPEED);
         
     }
 
     else if(signum == SIGUI){
-        printf("SIGUI received\n");
         new_round();
     }
     else if(signum == SIGUSR2){
-          printf("SIGUSR2 received --> %d\n", redActivePlayer);
+        sighold(SIGUSR1);
+        sighold(SIGUSR2); 
+        int fd = open(GUI_FIFO, O_RDONLY);
+        
+        if (fd == -1) {
+            perror("open");
+            exit(EXIT_FAILURE);
+        }
+
+        // read from FIFO
+        char buffer[6];
+        //sender#receiver
+        
+        if (read(fd, buffer, sizeof(buffer)) == -1) {
+            perror("read");
+            exit(EXIT_FAILURE);
+        }
+        close(fd);
+        sigrelse(SIGUSR2);
+        sigrelse(SIGUSR1);
+
+            printf("sender: %d, receiver: %d\n", sender, receiver);
             passBall(&balls[1], &redTeam[redActivePlayer], 2*SPEED);
     }
 }
@@ -225,7 +246,6 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
 
-    pause();
     new_round();
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);

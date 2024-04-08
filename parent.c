@@ -94,10 +94,7 @@ void alarm_handler(int signum) {
 
     
     shared_mem->ignore_signals = 1;
-
-
         my_pause(4);
-
     if (team1.number_of_balls < team2.number_of_balls) {
         team1.total_score++;
     }
@@ -105,7 +102,6 @@ void alarm_handler(int signum) {
     else if (team1.number_of_balls > team2.number_of_balls) {
         team2.total_score++;
     }
-
 
     cyan_stdout();
     printf("Team 1 score: %d, and number of balls: %d\n", team1.total_score, team1.number_of_balls);
@@ -116,6 +112,10 @@ void alarm_handler(int signum) {
     my_pause(4);
 
     if (current_round_number < number_of_rounds) {
+        //reset the gui 
+        #ifdef __GUI__
+        kill(gui_pid, SIGUI);
+        #endif
         doOneRound();
     }
 
@@ -146,6 +146,9 @@ void alarm_handler(int signum) {
         for (int i = 0; i < 2*PLAYERS_PER_TEAM; i++) {
             kill(process_pid[i], SIGKILL);
         }
+        #ifdef __GUI__
+        kill(gui_pid, SIGKILL);
+        #endif
 
         exit(0);
     }
@@ -156,9 +159,7 @@ void alarm_handler(int signum) {
 int main(int argc, char *argv[]) {
 
 #ifdef __GUI__
-
     gui_pid = fork();
-
     if (gui_pid == 0) {
 
         execlp("./ballpass", "ballpass.o", (const char*)NULL);
@@ -171,7 +172,6 @@ int main(int argc, char *argv[]) {
     else {
         sleep(1);
     }
-
 
 #endif 
     read_parameters(argc, argv);
@@ -229,8 +229,31 @@ int main(int argc, char *argv[]) {
         perror("sigaction for SIGUSR2");
         exit(EXIT_FAILURE);
     }
+        //sending the signal to both team leads
+    
+    #ifdef __GUI__
+        sighold(SIGUSR1);
+        sighold(SIGUSR2);
+        int fd_1 = open(GUI_FIFO, O_WRONLY);
+        
+        if (fd_1 == -1) {
+            perror("Error opening GUI FIFO");
+            exit(-1);
+        }
 
+        if (write(fd_1, "-1#5", sizeof(char) * 5) == -1) {
+            perror("Error writing to GUI FIFO");
+            exit(-1);
+        }
+        
+        close(fd_1);
 
+        sigrelse(SIGUSR1);
+        sigrelse(SIGUSR2);
+    #endif
+
+    sighold(SIGUSR1);
+    sighold(SIGUSR2);
     int fd = open(FIFO1, O_WRONLY);
 
     if (fd == -1) {
@@ -261,10 +284,9 @@ int main(int argc, char *argv[]) {
         reset_stderr();
         exit(-1);
     }
-
     close(fd);
-
-    //sending the signal to both team leads
+    sigrelse(SIGUSR1);
+    sigrelse(SIGUSR2);
 
    doOneRound();
     
@@ -347,24 +369,7 @@ void doOneRound() {
     // send a ball to team1 leader (send a signal to the team1 leader)
     team1.number_of_balls++;
     kill(process_pid[5], SIGUSR1);
-    #ifdef __GUI__
-    // kill(gui_pid, SIGUSR1);
-    // int fd_1 = open(GUI_FIFO, O_WRONLY);
     
-    // if (fd_1 == -1) {
-    //     perror("Error opening GUI FIFO");
-    //     exit(-1);
-    // }
-
-    // if (write(fd_1, "-1#5", sizeof(char) * 5) == -1) {
-    //     perror("Error writing to GUI FIFO");
-    //     exit(-1);
-    // }
-    
-    // close(fd_1);
-    #endif
-
-
     // send a ball to team2 leader (send a signal to the team2 leader)
     team2.number_of_balls++;
     kill(process_pid[11], SIGUSR1);
@@ -380,9 +385,7 @@ void fork_children(){
 
     char team1_leader_pid_arg[10]="-1";
     char team2_leader_pid_arg[10]="-1";
-
     char next_player_pid_arg[10]="-1";
-
     char next_pid_arg[10] = "-1";
 
 

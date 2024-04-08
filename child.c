@@ -245,7 +245,7 @@ int main(int argc, char* argv[]) {
 double short_pause_duration() {
     //returns a short pause duration in milliseconds
     int random_constant = 17 + rand() % 4; // number between 17 and 20
-    return 7000*((double)A / pow((double)(energy + random_constant), (double)K));
+    return 7500*((double)A / pow((double)(energy + random_constant), (double)K));
 }
 
 
@@ -269,6 +269,8 @@ void open_shared_mem() {
 
 
 void send_ball(int next_player_pid, int signum, int next_player_number) {
+
+    my_pause(short_pause_duration());
     #ifdef __GUI__
     if(player_number <= 5){
         kill(gui_pid, SIGUSR1);
@@ -277,23 +279,24 @@ void send_ball(int next_player_pid, int signum, int next_player_number) {
         kill(gui_pid, SIGUSR2);
     }
     #endif
-
-    my_pause(short_pause_duration());
     
     #ifdef __GUI__
-    // int fd = open(GUI_FIFO, O_WRONLY);
-    // if (fd == -1) {
-    //     perror("Error opening GUI FIFO");
-    //     return;
-    // }
-    // char message[8];
-    // sprintf(message, "%d#%d", player_number, next_player_number);
-    // if (write(fd, message, 8) == -1) {
-    //     perror("Error writing to GUI FIFO");
-    //     return;
-    // }
-
-    // close(fd);
+    sighold(SIGUSR1);
+    sighold(SIGUSR2);
+    int fd = open(GUI_FIFO, O_WRONLY);
+    if (fd == -1) {
+        perror("Error opening GUI FIFO");
+        return;
+    }
+    char message[8];
+    sprintf(message, "%d#%d", player_number, next_player_number);
+    if (write(fd, message, 8) == -1) {
+        perror("Error writing to GUI FIFO");
+        return;
+    }
+    close(fd);
+    sigrelse(SIGUSR1);
+    sigrelse(SIGUSR2);
     #endif
 
     printf("sending ball %d(%d) -> %d(%d), remaining energy is: %d\n", getpid(), player_number, next_player_pid, next_player_number,energy);
@@ -301,7 +304,7 @@ void send_ball(int next_player_pid, int signum, int next_player_number) {
     if (player_drops_ball()) {
         red_stdout();
         printf("Player %d dropped the ball\n", player_number);
-        printf("sending ball %d(%d) -> %d(%d), remaining energy is: %d\n", getpid(), player_number, next_player_pid, next_player_number,energy);
+        printf("resending ball %d(%d) -> %d(%d), remaining energy is: %d\n", getpid(), player_number, next_player_pid, next_player_number,energy);
         reset_stdout();
         fflush(stdout);
         energy = (energy > 20) ? energy - 3 : 20;

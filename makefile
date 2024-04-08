@@ -15,8 +15,6 @@ compile:
 run: compile
 	@./parent
 
-
-
 compile_gui:
 	@echo "Compiling..."
 	@$(CC) parent.c -o parent $(LIBS) -D__GUI__
@@ -33,3 +31,4 @@ test_gui:
 
 clean:
 	@rm -f parent child ballpass
+
