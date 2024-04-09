@@ -14,6 +14,7 @@ team team1;
 team team2;
 //init the two structs to 0 balls and 0 score
 
+union sigval value;
 
 // FUNCTION PROTOTYPES
 
@@ -114,7 +115,8 @@ void alarm_handler(int signum) {
     if (current_round_number < number_of_rounds) {
         //reset the gui 
         #ifdef __GUI__
-        kill(gui_pid, SIGUI);
+        value.sival_int = -1;
+        sigqueue(gui_pid, SIGUSR1, value);
         #endif
         doOneRound();
     }
@@ -147,7 +149,8 @@ void alarm_handler(int signum) {
             kill(process_pid[i], SIGKILL);
         }
         #ifdef __GUI__
-        kill(gui_pid, SIGKILL);
+        value.sival_int = -1;
+        sigqueue(gui_pid, SIGUSR1, value);
         #endif
 
         exit(0);
@@ -229,31 +232,8 @@ int main(int argc, char *argv[]) {
         perror("sigaction for SIGUSR2");
         exit(EXIT_FAILURE);
     }
-        //sending the signal to both team leads
-    
-    #ifdef __GUI__
-        sighold(SIGUSR1);
-        sighold(SIGUSR2);
-        int fd_1 = open(GUI_FIFO, O_WRONLY);
-        
-        if (fd_1 == -1) {
-            perror("Error opening GUI FIFO");
-            exit(-1);
-        }
 
-        if (write(fd_1, "-1#5", sizeof(char) * 5) == -1) {
-            perror("Error writing to GUI FIFO");
-            exit(-1);
-        }
-        
-        close(fd_1);
 
-        sigrelse(SIGUSR1);
-        sigrelse(SIGUSR2);
-    #endif
-
-    sighold(SIGUSR1);
-    sighold(SIGUSR2);
     int fd = open(FIFO1, O_WRONLY);
 
     if (fd == -1) {
@@ -285,8 +265,6 @@ int main(int argc, char *argv[]) {
         exit(-1);
     }
     close(fd);
-    sigrelse(SIGUSR1);
-    sigrelse(SIGUSR2);
 
    doOneRound();
     
@@ -323,24 +301,25 @@ void init_teams() {
 void create_FIFOs()
 {
 
-    // CAUTION:
-    // If keeping the FIFOs causes problems, we might need to remove the FIFOS if they exist
-    // 
-    //
-    //
+    remove(FIFO1);
+    remove(FIFO2);
+
+
     // if the FIFO exists, no problem.
-    if ((mkfifo(FIFO1, S_IFIFO | 0777)) == -1 && errno != EEXIST)
+    if ((mkfifo(FIFO1, S_IFIFO | 0777)) == -1)
     {
         perror("Error Creating Fifo");
         exit(-1);
     }
 
     // if the FIFO exists, no problem.
-    if ((mkfifo(FIFO2, S_IFIFO | 0777)) == -1 && errno != EEXIST)
+    if ((mkfifo(FIFO2, S_IFIFO | 0777)) == -1)
     {
         perror("Error Creating Fifo");
         exit(-1);
     }
+
+/*
 #ifdef __GUI__
     if ((mkfifo(GUI_FIFO, S_IFIFO | 0777)) == -1 && errno != EEXIST)
     {
@@ -348,6 +327,7 @@ void create_FIFOs()
         exit(-1);
     }
 #endif
+*/
 }
 
 
@@ -369,10 +349,24 @@ void doOneRound() {
     // send a ball to team1 leader (send a signal to the team1 leader)
     team1.number_of_balls++;
     kill(process_pid[5], SIGUSR1);
+
+    sleep(2);
+    #ifdef __GUI__
+    value.sival_int = -1;
+    sigqueue(gui_pid, SIGUSR1, value);
+    #endif
+
     
     // send a ball to team2 leader (send a signal to the team2 leader)
     team2.number_of_balls++;
     kill(process_pid[11], SIGUSR1);
+
+    usleep(400);
+
+    #ifdef __GUI__
+    value.sival_int = -2;
+    sigqueue(gui_pid, SIGUSR1, value);
+    #endif
 
 }
 

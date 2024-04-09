@@ -9,26 +9,29 @@ const int WINDOW_HEIGHT = 600;
 const float PI = 3.14159265359f;
 #define NUM_PLAYERS_PER_TEAM 6
 
+int current_ball_index = 0;
+
 struct Ball {
     float x;
     float y;
     float vx;
     float vy;
     bool moving;
+
+    struct Player* holder;
 };
 
 struct Player {
     float x;
     float y;
+
     struct Ball* ball;
 };
 
 struct Ball balls[MAX_NUM_BALLS];
-struct Player blueTeam[NUM_PLAYERS_PER_TEAM], redTeam[NUM_PLAYERS_PER_TEAM];
-int blueActivePlayer = 5; // Index of the player currently in possession of the blue ball
-int redActivePlayer = 5;  // Index of the player currently in possession of the red ball
 
-int sender, receiver;
+struct Player blueTeam[NUM_PLAYERS_PER_TEAM], redTeam[NUM_PLAYERS_PER_TEAM];
+
 
 void updateBallPosition(struct Ball* ball, struct Player* targetPlayer, float speed);
 void new_round();
@@ -47,6 +50,10 @@ void init() {
     glMatrixMode(GL_MODELVIEW);
 }
 
+void signal_handler_usr1(int signum, siginfo_t *si, void *ptr);
+void signal_handler_usr2(int signum, siginfo_t *si, void *ptr);
+void signal_handler_ui(int signum, siginfo_t *si, void *ptr);
+
 void display() {
     glClear(GL_COLOR_BUFFER_BIT);
     // Draw blue team
@@ -54,10 +61,26 @@ void display() {
     // Draw red team
     drawPlayers(redTeam, 1.0f, 0.0f, 0.0f); // Red color for red team players
     //keep track of the balls
-    updateBallPosition(&balls[0], &blueTeam[blueActivePlayer], SPEED*2);
-    updateBallPosition(&balls[1], &redTeam[redActivePlayer], SPEED*2);
-    drawBall(balls[0].x, balls[0].y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for balls
-    drawBall(balls[1].x, balls[1].y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for balls
+   // updateBallPosition(&balls[0], &blueTeam[blueActivePlayer], SPEED*2);
+    //updateBallPosition(&balls[1], &redTeam[redActivePlayer], SPEED*2);
+    
+    for (int i = 0; i < PLAYERS_PER_TEAM; i++) {
+        if (blueTeam[i].ball != NULL && blueTeam[i].ball->moving) {
+            updateBallPosition(blueTeam[i].ball, &blueTeam[i], SPEED*2);
+        }
+        if (redTeam[i].ball != NULL && redTeam[i].ball->moving) {
+            updateBallPosition(redTeam[i].ball, &redTeam[i], SPEED*2);
+        }
+    }
+
+
+    for (int i = 0; i < MAX_NUM_BALLS; i++) {
+
+        drawBall(balls[i].x, balls[i].y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for balls
+    }
+
+//    drawBall(balls[0].x, balls[0].y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for balls
+  //  drawBall(balls[1].x, balls[1].y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for balls
     glFlush();
 }
 
@@ -73,12 +96,14 @@ void updateBallPosition(struct Ball* ball, struct Player* targetPlayer, float sp
 
     // Check if ball reached the destination
     if(dx < 0.01 && dy < 0.01) {
-        ball->moving = false;
+       ball->moving = false;
+        /*
         if (ball == &balls[0]) {
             blueActivePlayer = (blueActivePlayer + 1) % NUM_PLAYERS_PER_TEAM; // Update active player for blue team to next player
         } else if (ball == &balls[1]){
             redActivePlayer = (redActivePlayer + 1) % NUM_PLAYERS_PER_TEAM; // Update active player for red team
         }
+        */
     }
 }
 
@@ -118,6 +143,7 @@ void drawPlayers(struct Player team[], float r, float g, float b) {
     }
 }
 
+/*
 void keyboard(unsigned char key, int x, int y) {
     switch (key) {
         case 'p': // 'p' key to pass the blue ball
@@ -130,74 +156,119 @@ void keyboard(unsigned char key, int x, int y) {
     glutPostRedisplay();
 }
 
-void signal_handler(int signum){
-    if(signum == SIGUSR1){
-        //open FIFO
-        sighold(SIGUSR1);
-        sighold(SIGUSR2); 
-        int fd = open(GUI_FIFO, O_RDONLY);
+*/
+
+// sigui -> new round
+//
+//
+
+
+void signal_handler_usr1(int signum, siginfo_t *si, void *ptr) {
+    
+        // recieved integer.
+
+        int received = si->si_value.sival_int;
         
-        if (fd == -1) {
-            perror("open");
-            exit(EXIT_FAILURE);
+        // pass to the other team leader. (team1 -> team2)
+        if (received == 511) {
+
+            //TODO: need to define a custom passBall function between team leaders
+
+            // to test, I will just pass to player 0 of the same team (blue)
+            
+                blueTeam[0].ball = blueTeam[4].ball;
+                passBall(blueTeam[4].ball, &blueTeam[0], 2*SPEED);
+
         }
 
-        // read from FIFO
-        char buffer[6];
-        //sender#receiver
-        
-        if (read(fd, buffer, sizeof(buffer)) == -1) {
-            perror("read");
-            exit(EXIT_FAILURE);
+        // pass to the other team leader. (team2 -> team1)
+        else if (received == 115) {
+            //TODO: need to define a custom passBall function between team leaders
+
+            // to test, I will just pass to player 0 of the same team (red)
+            
+
+                redTeam[0].ball = redTeam[4].ball;
+                passBall(redTeam[4].ball, &redTeam[0], 2*SPEED);
         }
 
-        close(fd);
-        sigrelse(SIGUSR2);
-        sigrelse(SIGUSR1);
-
-        if (sscanf(buffer, "%d#%d", &sender, &receiver) != 2) {
-            fprintf(stderr, "Invalid input format\n");
-            exit(EXIT_FAILURE);
+        // ball received from parent
+        else if (received == -1) {
+            // TODO
+            
+            printf("TESSTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\n");
+            // tell the next player which ball to pass next time
+            blueTeam[5].ball = &balls[current_ball_index];
+            passBall(&balls[current_ball_index++], &blueTeam[5], SPEED);
         }
 
-            printf("sender: %d, receiver: %d\n", sender, receiver);
-            passBall(&balls[0], &blueTeam[blueActivePlayer], 2*SPEED);
-        
-    }
-
-    else if(signum == SIGUI){
-        new_round();
-    }
-    else if(signum == SIGUSR2){
-        sighold(SIGUSR1);
-        sighold(SIGUSR2); 
-        int fd = open(GUI_FIFO, O_RDONLY);
-        
-        if (fd == -1) {
-            perror("open");
-            exit(EXIT_FAILURE);
+        else if (received == -2) {
+            // TODO
+            // tell the next player which ball to pass next time
+            redTeam[5].ball = &balls[current_ball_index];
+            passBall(&balls[current_ball_index++], &redTeam[5], 2*SPEED);
         }
 
-        // read from FIFO
-        char buffer[6];
-        //sender#receiver
-        
-        if (read(fd, buffer, sizeof(buffer)) == -1) {
-            perror("read");
-            exit(EXIT_FAILURE);
+        // pass between player 10 and 11
+        else if (received == 1011) {
+            
+            redTeam[5].ball = &balls[4];
+            passBall(redTeam[4].ball, &blueTeam[5], 2*SPEED);
         }
-        close(fd);
-        sigrelse(SIGUSR2);
-        sigrelse(SIGUSR1);
 
-            printf("sender: %d, receiver: %d\n", sender, receiver);
-            passBall(&balls[1], &redTeam[redActivePlayer], 2*SPEED);
-    }
+        else if (received == 910) {
+        
+            blueTeam[4].ball = &balls[3];
+            passBall(blueTeam[3].ball, &redTeam[4], 2*SPEED);
+        }
+
+        else {
+
+            int sender = received / 10;
+            int receiver = received % 10;
+
+            printf("sender: %d, receiver: %d-------------------------------------------------------------------\n", sender, receiver);
+
+            // initially (just to test)
+            // 
+            //
+            //
+            //
+            if (receiver <= 5) {
+
+                blueTeam[receiver].ball = blueTeam[sender].ball;
+                passBall(blueTeam[sender].ball, &blueTeam[receiver], 2*SPEED);
+            }
+
+            else {
+
+                int sender = sender - 6;
+                int receiver = receiver - 6;
+
+                redTeam[receiver].ball = redTeam[sender].ball;
+                passBall(redTeam[sender].ball, &redTeam[receiver], 2*SPEED);
+            }
+            
+            // Pass the ball to the receiver
+
+        }
+
+
+    glutPostRedisplay();
+}
+
+void signal_handler_usr2(int signum, siginfo_t *si, void *ptr) {
+    //TODO
+}
+
+void signal_handler_ui(int signum, siginfo_t *si, void *ptr) {
+    new_round();
 }
 
 
+
+
 void new_round() {
-    balls[0].moving = false;
 
     // Initialize blue team and red team player positions
     for (int i = 0; i < NUM_PLAYERS_PER_TEAM; ++i) {
@@ -207,39 +278,44 @@ void new_round() {
         redTeam[i].y = sin(2 * PI * (5 - i) / NUM_PLAYERS_PER_TEAM) * 0.5f + 0.5f;
     }
 
-    balls[0].x = 0.8f;
-    balls[0].y = 0.0f;
-    balls[0].vx = 0.0f;
-    balls[0].vy = 0.0f;
-    balls[1].x = 0.8f;
-    balls[1].y = 0.0f;
-    balls[1].vx = 0.0f;
-    balls[1].vy = 0.0f;
+    for (int i = 0; i < MAX_NUM_BALLS; ++i) {
+        balls[i].holder = NULL;
+        balls[i].moving = false;
+        balls[i].x = 0.8f;
+        balls[i].y = 0.0f;
+        balls[i].vx = 0.0f;
+        balls[i].vy = 0.0f;
+    }
+
+    for (int i = 0; i < NUM_PLAYERS_PER_TEAM; ++i) {
+        blueTeam[i].ball = NULL;
+        redTeam[i].ball = NULL;
+    }
 }
 
 int main(int argc, char** argv) {
     //set the signal handler for SIGUSR1 and SIGUSR2
-    sa_usr1.sa_handler = signal_handler;
+    sa_usr1.sa_sigaction = signal_handler_usr1;
+    sa_usr1.sa_flags = SA_SIGINFO;
     sigemptyset(&sa_usr1.sa_mask);
-    sa_usr1.sa_flags = 0;
 
     if (sigaction(SIGUSR1, &sa_usr1, NULL) == -1) {
         perror("sigaction for SIGUSR1");
         exit(EXIT_FAILURE);
     }
 
-    sa_usr2.sa_handler = signal_handler;
+    sa_usr2.sa_sigaction = signal_handler_usr2;
+    sa_usr2.sa_flags = SA_SIGINFO;
     sigemptyset(&sa_usr2.sa_mask);
-    sa_usr2.sa_flags = 0;
 
     if (sigaction(SIGUSR2, &sa_usr2, NULL) == -1) {
         perror("sigaction for SIGUSR2");
         exit(EXIT_FAILURE);
     }
 
-    sa_ui.sa_handler = signal_handler;
+    sa_ui.sa_sigaction = signal_handler_ui;
     sigemptyset(&sa_ui.sa_mask);
-    sa_ui.sa_flags = 0;
+    sa_ui.sa_flags = SA_SIGINFO;
 
     if (sigaction(SIGUI, &sa_ui, NULL) == -1) {
         perror("sigaction for SIGUI");
@@ -252,7 +328,7 @@ int main(int argc, char** argv) {
     glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
     glutCreateWindow("Ball Passing Simulation");
     glutDisplayFunc(display);
-    glutKeyboardFunc(keyboard);
+//    glutKeyboardFunc(keyboard);
     glutIdleFunc(display); // Update display continuously
     init();
     glutMainLoop();

@@ -22,8 +22,17 @@ compile_gui:
 	@$(CC) ballpass.c -o ballpass $(LIBS_GUI)
 
 
+compile_gui_dbg:
+	@echo "Compiling..."
+	@$(CC) parent.c -o parent $(LIBS) -D__GUI__ -g
+	@$(CC) child.c -o child $(LIBS) -D__GUI__ -g
+	@$(CC) ballpass.c -o ballpass $(LIBS_GUI) -g
+
 run_gui: compile_gui
 	@./parent
+
+qui_dbg: compile_gui_dbg
+	@gdb ./parent
 
 test_gui: 
 	@$(CC) ballpass.c -o ballpass $(LIBS_GUI)

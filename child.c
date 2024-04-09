@@ -27,6 +27,7 @@ int sigchild_number = 0;
 
 //bool next_round_started = true;
 
+union sigval value;
 
 int fd_shm;
 // Define a structure to hold the flag
@@ -271,32 +272,32 @@ void open_shared_mem() {
 void send_ball(int next_player_pid, int signum, int next_player_number) {
 
     my_pause(short_pause_duration());
+
     #ifdef __GUI__
-    if(player_number <= 5){
-        kill(gui_pid, SIGUSR1);
+    usleep(1000);
+
+    if (player_number == 5 && next_player_number == 1) {
+        value.sival_int = 511;
     }
-    else{
-        kill(gui_pid, SIGUSR2);
+    else if (player_number == 11 && next_player_number == 5) {
+
+        value.sival_int = 115;
     }
-    #endif
-    
-    #ifdef __GUI__
-    sighold(SIGUSR1);
-    sighold(SIGUSR2);
-    int fd = open(GUI_FIFO, O_WRONLY);
-    if (fd == -1) {
-        perror("Error opening GUI FIFO");
-        return;
+    else if (player_number == 10 && next_player_number == 11) {
+        value.sival_int = 1011;
     }
-    char message[8];
-    sprintf(message, "%d#%d", player_number, next_player_number);
-    if (write(fd, message, 8) == -1) {
-        perror("Error writing to GUI FIFO");
-        return;
+
+    else if (player_number == 9 && next_player_number == 10) {
+        value.sival_int = 910;
     }
-    close(fd);
-    sigrelse(SIGUSR1);
-    sigrelse(SIGUSR2);
+
+    else {
+        value.sival_int = player_number * 10 + next_player_number;
+    }
+    usleep(1000);
+
+    sigqueue(gui_pid, SIGUSR1, value);
+
     #endif
 
     printf("sending ball %d(%d) -> %d(%d), remaining energy is: %d\n", getpid(), player_number, next_player_pid, next_player_number,energy);
