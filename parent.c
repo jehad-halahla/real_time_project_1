@@ -63,6 +63,11 @@ void signal_handler(int signum) {
             reset_stdout();
             team2.number_of_balls++;
             kill(process_pid[11], SIGUSR1);
+            #ifdef __GUI__
+            value.sival_int = -2;
+            sigqueue(gui_pid, SIGUSR1, value);
+            #endif
+
         }
 
     }
@@ -79,6 +84,10 @@ void signal_handler(int signum) {
             reset_stdout();
             team1.number_of_balls++;
             kill(process_pid[5], SIGUSR1);
+            #ifdef __GUI__
+            value.sival_int = -1;
+            sigqueue(gui_pid, SIGUSR1, value);
+            #endif
         }
     }
 
@@ -116,7 +125,7 @@ void alarm_handler(int signum) {
         //reset the gui 
         #ifdef __GUI__
         value.sival_int = -1;
-        sigqueue(gui_pid, SIGUSR1, value);
+        sigqueue(gui_pid, SIGUI, value);
         #endif
         doOneRound();
     }
@@ -149,8 +158,7 @@ void alarm_handler(int signum) {
             kill(process_pid[i], SIGKILL);
         }
         #ifdef __GUI__
-        value.sival_int = -1;
-        sigqueue(gui_pid, SIGUSR1, value);
+        kill(gui_pid, SIGKILL);
         #endif
 
         exit(0);
@@ -180,8 +188,6 @@ int main(int argc, char *argv[]) {
     read_parameters(argc, argv);
     create_shared_mem();
     
-    //create the FIFOs
-    create_FIFOs();
     fork_children();
     init_teams();
     
@@ -233,38 +239,23 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
+    sleep(1);
 
-    int fd = open(FIFO1, O_WRONLY);
+    union sigval value;
+    value.sival_int = process_pid[0];
+    sigqueue(process_pid[5], SIGBUS, value);
+   
+    usleep(300);
 
-    if (fd == -1) {
-        perror("Error opening FIFO1");
-        exit(-1);
-    }
-    //pasing 5 and 6 as edge cases
-    int arr[2]  = {process_pid[5], process_pid[6]};
+    value.sival_int = process_pid[6];
+    sigqueue(process_pid[11], SIGBUS, value);
 
-    if (write(fd, arr, sizeof(int) * 2) == -1) {
-        perror("Error writing to FIFOR1");
-        exit(-1);
-    }
-    close(fd);
+    usleep(300);
 
-    fd = open(FIFO2, O_WRONLY);
-
-    if (fd == -1) {
-        red_stderr();
-        perror("Error opening FIFO2");
-        reset_stderr();
-        exit(-1);
-    }
-
-    if (write(fd, &process_pid[0], sizeof(pid_t)) == -1) {
-        red_stderr();
-        perror("Error writing to FIFO2");
-        reset_stderr();
-        exit(-1);
-    }
-    close(fd);
+    value.sival_int = process_pid[5];
+    sigqueue(process_pid[11], SIGBUS, value);
+    
+    usleep(500);
 
    doOneRound();
     
@@ -298,38 +289,6 @@ void init_teams() {
     team2.total_score = 0;
 }
 
-void create_FIFOs()
-{
-
-    remove(FIFO1);
-    remove(FIFO2);
-
-
-    // if the FIFO exists, no problem.
-    if ((mkfifo(FIFO1, S_IFIFO | 0777)) == -1)
-    {
-        perror("Error Creating Fifo");
-        exit(-1);
-    }
-
-    // if the FIFO exists, no problem.
-    if ((mkfifo(FIFO2, S_IFIFO | 0777)) == -1)
-    {
-        perror("Error Creating Fifo");
-        exit(-1);
-    }
-
-/*
-#ifdef __GUI__
-    if ((mkfifo(GUI_FIFO, S_IFIFO | 0777)) == -1 && errno != EEXIST)
-    {
-        perror("Error Creating Fifo");
-        exit(-1);
-    }
-#endif
-*/
-}
-
 
 void doOneRound() {
     
@@ -350,7 +309,7 @@ void doOneRound() {
     team1.number_of_balls++;
     kill(process_pid[5], SIGUSR1);
 
-    sleep(2);
+    usleep(300);
     #ifdef __GUI__
     value.sival_int = -1;
     sigqueue(gui_pid, SIGUSR1, value);

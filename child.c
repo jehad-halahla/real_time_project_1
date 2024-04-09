@@ -21,9 +21,9 @@ void send_ball_to_next_player();
 
 bool ignore_usr1_usr2 = false;
 
-struct sigaction sa_usr1, sa_usr2, sa_chld, sa_io, ignore_action, empty_action;
+struct sigaction sa_usr1, sa_usr2, sa_chld, sa_io, ignore_action, empty_action, sa_bus;
 
-int sigchild_number = 0;
+int sig_bus_num = 0;
 
 //bool next_round_started = true;
 
@@ -122,6 +122,24 @@ void signal_handler_sigchild(int signum) {
 }
 
 
+void handler_bus(int signum, siginfo_t *info, void *context) {
+
+    if (signum == SIGBUS) {
+       
+        if (sig_bus_num == 0) {
+            sig_bus_num++;
+            next_player_pid = info->si_value.sival_int;
+        }
+
+        else {
+        // team1 leader pid 
+        
+            pid_of_team1_leader = info->si_value.sival_int;
+        }
+    }
+}
+
+
 void dummy_handler(int signum);
 
 
@@ -188,51 +206,15 @@ int main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    // normalizing variables for each player
-    this_team_leader_pid = (player_number <= 5) ? pid_of_team1_leader : pid_of_team2_leader;
-    other_team_leader_pid = (player_number <= 5) ? pid_of_team2_leader : pid_of_team1_leader;
 
-    if (player_number == 5) {
-
-        int fd = open(FIFO2, O_RDONLY);
-        if (fd == -1) {
-            perror("Error opening FIFO2");
-            exit(-1);
-        }
-
-        if (read(fd, &next_player_pid, sizeof(pid_t)) == -1) {
-            perror("Error reading from FIFO2");
-            exit(-1);
-        }
-
-
-        close(fd);
-        
-
+    sa_bus.sa_sigaction = handler_bus;
+    sigemptyset(&sa_bus.sa_mask);
+    sa_bus.sa_flags = SA_SIGINFO;
+    if (sigaction(SIGBUS, &sa_bus, NULL) == -1) {
+        perror("sigaction for SIGBUS");
+        exit(EXIT_FAILURE);
     }
 
-    if (player_number == 11) {
-
-        int fd = open(FIFO1, O_RDONLY);
-
-        int arr[2];
-
-        if (fd == -1) {
-            perror("Error opening FIFO1");
-            exit(-1);
-        }
-
-        if (read(fd, arr, 2*sizeof(pid_t)) == -1) {
-            perror("Error reading from FIFO1");
-            exit(-1);
-        }
-
-        pid_of_team1_leader = arr[0];
-        next_player_pid = arr[1];
-
-        close(fd);
-
-    }
 
     while (1) {
         
@@ -293,15 +275,13 @@ void send_ball(int next_player_pid, int signum, int next_player_number) {
     else {
 
         value.sival_int = player_number * 10 + next_player_number;
-
-        if (player_number > 5) {
-            printf("sigvalllllllllll=%dooooooooPN=%dxxxxxxxxNPN=%d\n", value.sival_int, player_number, next_player_number);
-        }
+        printf("sigvalllllllllll=%dooooooooPN=%dxxxxxxxxNPN=%d\n", value.sival_int, player_number, next_player_number);
     }
 
     usleep(1000);
 
     sigqueue(gui_pid, SIGUSR1, value);
+
    // }
     #endif
 

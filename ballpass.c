@@ -60,27 +60,26 @@ void display() {
     drawPlayers(blueTeam, 0.0f, 0.0f, 1.0f); // Blue color for blue team players
     // Draw red team
     drawPlayers(redTeam, 1.0f, 0.0f, 0.0f); // Red color for red team players
+
     //keep track of the balls
-   // updateBallPosition(&balls[0], &blueTeam[blueActivePlayer], SPEED*2);
-    //updateBallPosition(&balls[1], &redTeam[redActivePlayer], SPEED*2);
-    
     for (int i = 0; i < PLAYERS_PER_TEAM; i++) {
         if (blueTeam[i].ball != NULL) {
             updateBallPosition(blueTeam[i].ball, &blueTeam[i], SPEED);
+           // drawBall(blueTeam[i].ball->x, blueTeam[i].ball->y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for balls
         }
         if (redTeam[i].ball != NULL) {
             updateBallPosition(redTeam[i].ball, &redTeam[i], SPEED);
+           // drawBall(redTeam[i].ball->x, redTeam[i].ball->y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for balls
         }
     }
 
-
+    
     for (int i = 0; i < MAX_NUM_BALLS; i++) {
 
         drawBall(balls[i].x, balls[i].y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for balls
     }
+    
 
-//    drawBall(balls[0].x, balls[0].y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for balls
-  //  drawBall(balls[1].x, balls[1].y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for balls
     glFlush();
 }
 
@@ -172,26 +171,18 @@ void signal_handler_usr1(int signum, siginfo_t *si, void *ptr) {
         // pass to the other team leader. (team1 -> team2)
         if (received == 511) {
 
-            //TODO: need to define a custom passBall function between team leaders
-
-            // to test, I will just pass to player 0 of the same team (blue)
-            
-                blueTeam[0].ball = blueTeam[5].ball;
+                redTeam[5].ball = blueTeam[5].ball;
                 blueTeam[5].ball = NULL;
-                passBall(blueTeam[0].ball, &blueTeam[0], SPEED);
+                passBall(redTeam[5].ball, &redTeam[5], SPEED);
 
         }
 
         // pass to the other team leader. (team2 -> team1)
         else if (received == 115) {
-            //TODO: need to define a custom passBall function between team leaders
 
-            // to test, I will just pass to player 0 of the same team (red)
-            
-
-                redTeam[0].ball = redTeam[5].ball;
+                blueTeam[5].ball = redTeam[5].ball;
                 redTeam[5].ball = NULL;
-                passBall(redTeam[0].ball, &redTeam[0], SPEED);
+                passBall(blueTeam[5].ball, &blueTeam[5], SPEED);
         }
 
         // ball received from parent
@@ -216,14 +207,14 @@ void signal_handler_usr1(int signum, siginfo_t *si, void *ptr) {
         // pass between player 10 and 11
         else if (received == 1011) {
             
-            redTeam[5].ball = &balls[4];
+            redTeam[5].ball = redTeam[4].ball;
             redTeam[4].ball = NULL;
             passBall(redTeam[5].ball, &redTeam[5], SPEED);
         }
 
         else if (received == 910) {
         
-            redTeam[4].ball = &balls[3];
+            redTeam[4].ball = redTeam[3].ball;
             redTeam[3].ball = NULL;
             passBall(redTeam[4].ball, &redTeam[4], SPEED);
         }
@@ -233,7 +224,6 @@ void signal_handler_usr1(int signum, siginfo_t *si, void *ptr) {
             int sender = received / 10;
             int receiver = received % 10;
 
-            printf("sender: %d, receiver: %d-------------------------------------------------------------------\n", sender, receiver);
 
             // initially (just to test)
             // 
@@ -242,6 +232,7 @@ void signal_handler_usr1(int signum, siginfo_t *si, void *ptr) {
             //
             if (receiver <= 5) {
 
+                printf("sender: %d, receiver: %d-------------------------------------------------------------------\n", sender, receiver);
                 blueTeam[receiver].ball = blueTeam[sender].ball;
                 blueTeam[sender].ball = NULL;
                 passBall(blueTeam[receiver].ball, &blueTeam[receiver], SPEED);
@@ -252,7 +243,7 @@ void signal_handler_usr1(int signum, siginfo_t *si, void *ptr) {
                  sender = sender - 6;
                  receiver = receiver - 6;
 
-                printf("sender: %d, receiver: %d+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n", sender, receiver);
+                printf("sender: %d, receiver: %d+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n", sender+6, receiver+6);
                 redTeam[receiver].ball = redTeam[sender].ball;
                 redTeam[sender].ball = NULL;
                 passBall(redTeam[receiver].ball, &redTeam[receiver], SPEED);
@@ -263,7 +254,7 @@ void signal_handler_usr1(int signum, siginfo_t *si, void *ptr) {
         }
 
 
-    //glutPostRedisplay();
+    glutPostRedisplay();
 }
 
 void signal_handler_usr2(int signum, siginfo_t *si, void *ptr) {
@@ -278,6 +269,8 @@ void signal_handler_ui(int signum, siginfo_t *si, void *ptr) {
 
 
 void new_round() {
+
+    current_ball_index = 0;
 
     // Initialize blue team and red team player positions
     for (int i = 0; i < NUM_PLAYERS_PER_TEAM; ++i) {
