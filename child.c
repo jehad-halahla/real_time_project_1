@@ -275,7 +275,6 @@ void send_ball(int next_player_pid, int signum, int next_player_number) {
     else {
 
         value.sival_int = player_number * 10 + next_player_number;
-        printf("sigvalllllllllll=%dooooooooPN=%dxxxxxxxxNPN=%d\n", value.sival_int, player_number, next_player_number);
     }
 
     usleep(1000);
