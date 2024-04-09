@@ -62,14 +62,10 @@ void display() {
     drawPlayers(redTeam, 1.0f, 0.0f, 0.0f); // Red color for red team players
 
     //keep track of the balls
-    for (int i = 0; i < PLAYERS_PER_TEAM; i++) {
-        if (blueTeam[i].ball != NULL) {
-            updateBallPosition(blueTeam[i].ball, &blueTeam[i], SPEED);
+    for (int i = 0; i < MAX_NUM_BALLS; i++) {
+        if (balls[i].holder != NULL) {
+            updateBallPosition(&balls[i], balls[i].holder, SPEED);
            // drawBall(blueTeam[i].ball->x, blueTeam[i].ball->y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for balls
-        }
-        if (redTeam[i].ball != NULL) {
-            updateBallPosition(redTeam[i].ball, &redTeam[i], SPEED);
-           // drawBall(redTeam[i].ball->x, redTeam[i].ball->y, 0.03f, 1.0f, 1.0f, 1.0f); // White color for balls
         }
     }
 
@@ -171,52 +167,93 @@ void signal_handler_usr1(int signum, siginfo_t *si, void *ptr) {
         // pass to the other team leader. (team1 -> team2)
         if (received == 511) {
 
-                redTeam[5].ball = blueTeam[5].ball;
-                blueTeam[5].ball = NULL;
-                passBall(redTeam[5].ball, &redTeam[5], SPEED);
+            struct Ball* temp = NULL;
+
+            for (int i = 0; i < MAX_NUM_BALLS; ++i) {
+                if (balls[i].holder == &blueTeam[5]) {
+                    temp = &balls[i];
+                    break;
+                }
+            }
+
+            temp->holder = &redTeam[5];
+            passBall(temp, &redTeam[5], SPEED);
 
         }
 
         // pass to the other team leader. (team2 -> team1)
         else if (received == 115) {
 
-                blueTeam[5].ball = redTeam[5].ball;
-                redTeam[5].ball = NULL;
-                passBall(blueTeam[5].ball, &blueTeam[5], SPEED);
+            struct Ball* temp = NULL;
+
+            for (int i = 0; i < MAX_NUM_BALLS; ++i) {
+                if (balls[i].holder == &redTeam[5]) {
+                    temp = &balls[i];
+                    break;
+                }
+            }
+
+            temp->holder = &blueTeam[5];
+            passBall(temp, &blueTeam[5], SPEED);
         }
 
         // ball received from parent
         else if (received == -1) {
             // TODO
-            
-            printf("TESSTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\n");
-            // tell the next player which ball to pass next time
-            blueTeam[5].ball = &balls[current_ball_index];
-            passBall(&balls[current_ball_index], &blueTeam[5], SPEED);
-            current_ball_index++;
+            int i;
+            for (i = 0; i < MAX_NUM_BALLS; ++i) {
+                if (balls[i].holder == NULL) {
+                    balls[i].holder = &blueTeam[5];
+                    break;
+                }
+            }
+
+            balls[i].holder = &blueTeam[5];
+            passBall(&balls[i], &blueTeam[5], SPEED);
+
         }
 
         else if (received == -2) {
-            // TODO
-            // tell the next player which ball to pass next time
-            redTeam[5].ball = &balls[current_ball_index];
-            passBall(&balls[current_ball_index], &redTeam[5], SPEED);
-            current_ball_index++;
+            int i;
+            for (i = 0; i < MAX_NUM_BALLS; ++i) {
+                if (balls[i].holder == NULL) {
+                    balls[i].holder = &redTeam[5];
+                    break;
+                }
+            }
+            balls[i].holder = &redTeam[5];
+            passBall(&balls[i], &redTeam[5], SPEED);
+
         }
 
         // pass between player 10 and 11
         else if (received == 1011) {
             
-            redTeam[5].ball = redTeam[4].ball;
-            redTeam[4].ball = NULL;
-            passBall(redTeam[5].ball, &redTeam[5], SPEED);
+            struct Ball* temp = NULL;
+
+            for (int i = 0; i < MAX_NUM_BALLS; ++i) {
+                if (balls[i].holder == &redTeam[4]) {
+                    temp = &balls[i];
+                    break;
+                }
+            }
+
+            temp->holder = &redTeam[5];
+            passBall(temp, &redTeam[5], SPEED);
         }
 
         else if (received == 910) {
         
-            redTeam[4].ball = redTeam[3].ball;
-            redTeam[3].ball = NULL;
-            passBall(redTeam[4].ball, &redTeam[4], SPEED);
+            struct Ball* temp = NULL;
+
+            for (int i = 0; i < MAX_NUM_BALLS; ++i) {
+                if (balls[i].holder == &redTeam[3]) {
+                    temp = &balls[i];
+                    break;
+                }
+            }
+            temp->holder = &redTeam[4];
+            passBall(temp, &redTeam[4], SPEED);
         }
 
         else {
@@ -232,10 +269,17 @@ void signal_handler_usr1(int signum, siginfo_t *si, void *ptr) {
             //
             if (receiver <= 5) {
 
-                printf("sender: %d, receiver: %d-------------------------------------------------------------------\n", sender, receiver);
-                blueTeam[receiver].ball = blueTeam[sender].ball;
-                blueTeam[sender].ball = NULL;
-                passBall(blueTeam[receiver].ball, &blueTeam[receiver], SPEED);
+                struct Ball* temp = NULL;
+                int i;
+                for (i = 0; i < MAX_NUM_BALLS; ++i) {
+                    if (balls[i].holder == &blueTeam[sender]) {
+                        temp = &balls[i];
+                        break;
+                    }
+                }
+                
+                temp->holder = &blueTeam[receiver];
+                passBall(temp, &blueTeam[receiver], SPEED);
             }
 
             else {
@@ -243,10 +287,16 @@ void signal_handler_usr1(int signum, siginfo_t *si, void *ptr) {
                  sender = sender - 6;
                  receiver = receiver - 6;
 
-                printf("sender: %d, receiver: %d+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n", sender+6, receiver+6);
-                redTeam[receiver].ball = redTeam[sender].ball;
-                redTeam[sender].ball = NULL;
-                passBall(redTeam[receiver].ball, &redTeam[receiver], SPEED);
+                struct Ball* temp = NULL;
+
+                for (int i = 0; i < MAX_NUM_BALLS; ++i) {
+                    if (balls[i].holder == &redTeam[sender]) {
+                        temp = &balls[i];
+                        break;
+                    }
+                }
+                temp->holder = &redTeam[receiver];
+                passBall(temp, &redTeam[receiver], SPEED);
             }
             
             // Pass the ball to the receiver
@@ -289,10 +339,6 @@ void new_round() {
         balls[i].vy = 0.0f;
     }
 
-    for (int i = 0; i < NUM_PLAYERS_PER_TEAM; ++i) {
-        blueTeam[i].ball = NULL;
-        redTeam[i].ball = NULL;
-    }
 }
 
 int main(int argc, char** argv) {
