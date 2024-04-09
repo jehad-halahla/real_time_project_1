@@ -276,13 +276,12 @@ void send_ball(int next_player_pid, int signum, int next_player_number) {
     #ifdef __GUI__
     usleep(1000);
 
-    if (player_number == 5 && next_player_number == 1) {
+ //   if (next_player_number <= 5) {
+    
+    if (player_number == 5 && next_player_number == 11) {
         value.sival_int = 511;
     }
-    else if (player_number == 11 && next_player_number == 5) {
 
-        value.sival_int = 115;
-    }
     else if (player_number == 10 && next_player_number == 11) {
         value.sival_int = 1011;
     }
@@ -292,12 +291,18 @@ void send_ball(int next_player_pid, int signum, int next_player_number) {
     }
 
     else {
+
         value.sival_int = player_number * 10 + next_player_number;
+
+        if (player_number > 5) {
+            printf("sigvalllllllllll=%dooooooooPN=%dxxxxxxxxNPN=%d\n", value.sival_int, player_number, next_player_number);
+        }
     }
+
     usleep(1000);
 
     sigqueue(gui_pid, SIGUSR1, value);
-
+   // }
     #endif
 
     printf("sending ball %d(%d) -> %d(%d), remaining energy is: %d\n", getpid(), player_number, next_player_pid, next_player_number,energy);
