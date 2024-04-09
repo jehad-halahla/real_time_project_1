@@ -63,6 +63,11 @@ void signal_handler(int signum) {
             reset_stdout();
             team2.number_of_balls++;
             kill(process_pid[11], SIGUSR1);
+            #ifdef __GUI__
+            value.sival_int = -2;
+            sigqueue(gui_pid, SIGUSR1, value);
+            #endif
+
         }
 
     }
@@ -79,6 +84,10 @@ void signal_handler(int signum) {
             reset_stdout();
             team1.number_of_balls++;
             kill(process_pid[5], SIGUSR1);
+            #ifdef __GUI__
+            value.sival_int = -1;
+            sigqueue(gui_pid, SIGUSR1, value);
+            #endif
         }
     }
 
@@ -116,7 +125,7 @@ void alarm_handler(int signum) {
         //reset the gui 
         #ifdef __GUI__
         value.sival_int = -1;
-        sigqueue(gui_pid, SIGUSR1, value);
+        sigqueue(gui_pid, SIGUI, value);
         #endif
         doOneRound();
     }
@@ -149,8 +158,7 @@ void alarm_handler(int signum) {
             kill(process_pid[i], SIGKILL);
         }
         #ifdef __GUI__
-        value.sival_int = -1;
-        sigqueue(gui_pid, SIGUSR1, value);
+        kill(gui_pid, SIGKILL);
         #endif
 
         exit(0);
@@ -350,7 +358,7 @@ void doOneRound() {
     team1.number_of_balls++;
     kill(process_pid[5], SIGUSR1);
 
-    sleep(2);
+    usleep(300);
     #ifdef __GUI__
     value.sival_int = -1;
     sigqueue(gui_pid, SIGUSR1, value);

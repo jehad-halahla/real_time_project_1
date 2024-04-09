@@ -293,15 +293,13 @@ void send_ball(int next_player_pid, int signum, int next_player_number) {
     else {
 
         value.sival_int = player_number * 10 + next_player_number;
-
-        if (player_number > 5) {
-            printf("sigvalllllllllll=%dooooooooPN=%dxxxxxxxxNPN=%d\n", value.sival_int, player_number, next_player_number);
-        }
+        printf("sigvalllllllllll=%dooooooooPN=%dxxxxxxxxNPN=%d\n", value.sival_int, player_number, next_player_number);
     }
 
     usleep(1000);
 
     sigqueue(gui_pid, SIGUSR1, value);
+
    // }
     #endif
 
