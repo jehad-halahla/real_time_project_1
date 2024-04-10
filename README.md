@@ -3,7 +3,7 @@ This project (project #1) is part of the "Applications of Real-time & Embedded S
 > [!note]
 > You need a Linux environment in order to be able to run this program.
 
-https://github.com/jehad-halahla/real_time_project_1/assets/88844444/ec0872e9-4645-4fd8-8076-622b0bd07bb8
+https://github.com/jehad-halahla/real_time_project_1/assets/88844444/demo
 
 
 ## Functionalities used in this project
